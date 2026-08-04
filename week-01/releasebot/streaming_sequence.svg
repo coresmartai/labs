@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="0" dy="2" result="off"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#475569"/>
+    </marker>
+    <marker id="arrowG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+    </marker>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#ECFDF5"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="720" fill="url(#bg)"/>
+
+  <text x="600" y="46" text-anchor="middle" font-size="26" font-weight="700" fill="#0F172A">Streaming a Response - End to End (SSE)</text>
+  <text x="600" y="72" text-anchor="middle" font-size="14" fill="#64748B">Five lanes. One open connection. Tokens flow as they're generated.</text>
+
+  <!-- Lane headers -->
+  <g font-size="13" font-weight="700">
+    <g filter="url(#shadow)"><rect x="50" y="100" width="150" height="42" rx="10" fill="#FFFFFF" stroke="#94A3B8" stroke-width="1.5"/></g>
+    <text x="125" y="126" text-anchor="middle" fill="#334155">Client (curl)</text>
+
+    <g filter="url(#shadow)"><rect x="270" y="100" width="170" height="42" rx="10" fill="#EEF2FF" stroke="#4F46E5" stroke-width="1.5"/></g>
+    <text x="355" y="126" text-anchor="middle" fill="#1E1B4B">FastAPI route</text>
+
+    <g filter="url(#shadow)"><rect x="510" y="100" width="170" height="42" rx="10" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.5"/></g>
+    <text x="595" y="126" text-anchor="middle" fill="#451A03">llm.py wrapper</text>
+
+    <g filter="url(#shadow)"><rect x="750" y="100" width="170" height="42" rx="10" fill="#FDF2F8" stroke="#EC4899" stroke-width="1.5"/></g>
+    <text x="835" y="126" text-anchor="middle" fill="#500724">OpenAI SDK</text>
+
+    <g filter="url(#shadow)"><rect x="990" y="100" width="170" height="42" rx="10" fill="#ECFEFF" stroke="#06B6D4" stroke-width="1.5"/></g>
+    <text x="1075" y="126" text-anchor="middle" fill="#083344">OpenAI API</text>
+  </g>
+
+  <!-- Lane lines -->
+  <g stroke="#CBD5E1" stroke-width="1.5" stroke-dasharray="3 4">
+    <line x1="125" y1="148" x2="125" y2="660"/>
+    <line x1="355" y1="148" x2="355" y2="660"/>
+    <line x1="595" y1="148" x2="595" y2="660"/>
+    <line x1="835" y1="148" x2="835" y2="660"/>
+    <line x1="1075" y1="148" x2="1075" y2="660"/>
+  </g>
+
+  <!-- 1. Client GET -->
+  <g>
+    <line x1="125" y1="190" x2="350" y2="190" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="240" y="180" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">POST /summarize-stream</text>
+  </g>
+
+  <!-- 2. Open StreamingResponse -->
+  <g>
+    <rect x="295" y="210" width="120" height="34" rx="8" fill="#EEF2FF" stroke="#4F46E5" stroke-width="1"/>
+    <text x="355" y="231" text-anchor="middle" font-size="11" font-weight="600" fill="#1E1B4B">StreamingResponse</text>
+  </g>
+
+  <!-- 3. wrapper called -->
+  <g>
+    <line x1="355" y1="270" x2="590" y2="270" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="475" y="260" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">stream_text(prompt)</text>
+  </g>
+
+  <!-- 4. SDK called -->
+  <g>
+    <line x1="595" y1="305" x2="830" y2="305" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="710" y="295" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">chat.completions.create(stream=True)</text>
+  </g>
+
+  <!-- 5. SDK -> API HTTP/2 -->
+  <g>
+    <line x1="835" y1="345" x2="1070" y2="345" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="950" y="335" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">HTTP/2 streaming POST</text>
+  </g>
+
+  <!-- 6. API emits deltas (multiple) -->
+  <g>
+    <line x1="1075" y1="395" x2="840" y2="395" stroke="#10B981" stroke-width="2" marker-end="url(#arrowG)"/>
+    <line x1="1075" y1="425" x2="840" y2="425" stroke="#10B981" stroke-width="2" marker-end="url(#arrowG)"/>
+    <line x1="1075" y1="455" x2="840" y2="455" stroke="#10B981" stroke-width="2" marker-end="url(#arrowG)"/>
+    <text x="958" y="385" text-anchor="middle" font-size="12" font-weight="700" fill="#065F46">delta · delta · delta…</text>
+  </g>
+
+  <!-- 7. SDK yields deltas -->
+  <g>
+    <line x1="835" y1="495" x2="600" y2="495" stroke="#10B981" stroke-width="2" marker-end="url(#arrowG)"/>
+    <text x="717" y="485" text-anchor="middle" font-size="12" font-weight="600" fill="#065F46">yield text deltas</text>
+  </g>
+
+  <!-- 8. wrapper formats SSE -->
+  <g>
+    <line x1="595" y1="535" x2="360" y2="535" stroke="#10B981" stroke-width="2" marker-end="url(#arrowG)"/>
+    <text x="478" y="525" text-anchor="middle" font-size="12" font-weight="600" fill="#065F46">yield raw text deltas</text>
+  </g>
+
+  <!-- 9. flush to client -->
+  <g>
+    <line x1="355" y1="575" x2="130" y2="575" stroke="#10B981" stroke-width="2" marker-end="url(#arrowG)"/>
+    <text x="242" y="558" text-anchor="middle" font-size="12" font-family="monospace" font-weight="600" fill="#065F46">data: {...}\n\n</text>
+    <text x="242" y="593" text-anchor="middle" font-size="11" fill="#475569">event_generator (main.py) wraps each delta in an SSE frame</text>
+  </g>
+
+  <!-- Backpressure callout -->
+  <g filter="url(#shadow)">
+    <rect x="50" y="610" width="500" height="50" rx="10" fill="#FFFFFF" stroke="#F59E0B" stroke-width="1.5"/>
+  </g>
+  <text x="65" y="630" font-size="12" font-weight="700" fill="#451A03">⚠ Backpressure lives here:</text>
+  <text x="65" y="650" font-size="11" fill="#475569">slow client → buffer fills → cap concurrent streams + timeouts.</text>
+
+  <!-- Connection-stays-open callout -->
+  <g filter="url(#shadow)">
+    <rect x="660" y="610" width="500" height="50" rx="10" fill="#FFFFFF" stroke="#10B981" stroke-width="1.5"/>
+  </g>
+  <text x="675" y="630" font-size="12" font-weight="700" fill="#065F46">⤷ Connection stays open client→API the whole time.</text>
+  <text x="675" y="650" font-size="11" fill="#475569">One HTTP request, many tokens - that's all "streaming" really is.</text>
+
+  <text x="600" y="700" text-anchor="middle" font-size="12" fill="#94A3B8">CoreSmart GenAI Developer Course · Week 1 · Video 2</text>
+</svg>

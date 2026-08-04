@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoreSmart GenAI - Developer Course Week 1</title>
+  <style>
+    /* ── Reset & tokens ─────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0d1117;
+      --surface:     #161b22;
+      --surface-2:   #21262d;
+      --surface-3:   #2d333b;
+      --border:      #30363d;
+      --text:        #e6edf3;
+      --text-muted:  #7d8590;
+      --blue:        #58a6ff;
+      --blue-dim:    #1f3a5f;
+      --green:       #3fb950;
+      --green-dim:   #1a3a28;
+      --red:         #f85149;
+      --red-dim:     #3d1a1a;
+      --orange:      #d29922;
+      --radius:      8px;
+      --mono:        'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      height: 52px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .header-title .logo {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #1a56db, #7e3af2);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+    }
+
+    .week-badge {
+      background: var(--blue-dim);
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 20px;
+      border: 1px solid #1f4080;
+    }
+
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+
+    /* ── Buttons ─────────────────────────────────────────────────── */
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+
+    .btn-primary {
+      background: #1a56db;
+      color: #fff;
+      padding: 8px 16px;
+    }
+    .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+
+    .btn-secondary {
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 16px;
+    }
+    .btn-secondary:hover:not(:disabled) { background: var(--surface-3); }
+
+    .btn-demo {
+      background: transparent;
+      color: var(--blue);
+      border: 1px solid var(--blue-dim);
+      padding: 5px 12px;
+      font-size: 12px;
+    }
+    .btn-demo:hover:not(:disabled) { background: var(--blue-dim); }
+
+    /* ── Health status chip ─────────────────────────────────────── */
+    #health-chip {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+    #health-chip:hover { background: var(--surface-3); }
+    #health-chip.online  { color: var(--green); border-color: #1a4a2e; }
+    #health-chip.offline { color: var(--red);   border-color: #4a1a1a; }
+
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .online  .dot { background: var(--green); box-shadow: 0 0 6px #3fb95088; animation: pulse 2s infinite; }
+    .offline .dot { background: var(--red); }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.5; }
+    }
+
+    /* ── Main layout ─────────────────────────────────────────────── */
+    main {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 0;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Left panel ──────────────────────────────────────────────── */
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .panel-section {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-section:last-child { border-bottom: none; }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    textarea, input[type="email"] {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-size: 13px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    textarea:focus, input[type="email"]:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px #1a56db22;
+    }
+
+    #notes {
+      flex: 1;
+      min-height: 0;
+      height: 0;          /* flex overrides this; needed for shrink to work */
+      padding: 10px 12px;
+      line-height: 1.6;
+    }
+
+    input[type="email"] {
+      padding: 8px 12px;
+      height: 38px;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .action-btns {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 16px;
+    }
+    .action-btns button { width: 100%; justify-content: center; }
+
+    /* ── Right panel ─────────────────────────────────────────────── */
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .pane {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .pane-output { flex: 1; border-bottom: 1px solid var(--border); }
+    .pane-logs   { height: 200px; flex-shrink: 0; }
+
+    .pane-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .pane-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .pane-body::-webkit-scrollbar { width: 6px; }
+    .pane-body::-webkit-scrollbar-track { background: transparent; }
+    .pane-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .placeholder-msg {
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 13px;
+      font-style: italic;
+    }
+
+    /* ── JSON syntax highlight ───────────────────────────────────── */
+    .j-k    { color: #79c0ff; }   /* key    */
+    .j-s    { color: #a5d6ff; }   /* string */
+    .j-n    { color: #ffa657; }   /* number */
+    .j-b    { color: #7ee787; }   /* bool   */
+    .j-null { color: var(--text-muted); }
+
+    /* ── Streaming output ────────────────────────────────────────── */
+    #output-body.streaming::after {
+      content: '▋';
+      animation: blink 0.8s step-end infinite;
+      color: var(--blue);
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* ── Log entries ─────────────────────────────────────────────── */
+    .log-entry {
+      display: flex;
+      gap: 10px;
+      padding: 2px 0;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .log-ts    { color: var(--text-muted); flex-shrink: 0; }
+    .log-level { font-weight: 700; flex-shrink: 0; width: 50px; }
+    .log-msg   { color: var(--text); word-break: break-word; }
+
+    .log-info    .log-level { color: var(--blue); }
+    .log-success .log-level { color: var(--green); }
+    .log-warn    .log-level { color: var(--orange); }
+    .log-error   .log-level { color: var(--red); }
+
+    /* ── Loading spinner ─────────────────────────────────────────── */
+    .spinner {
+      display: none;
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      flex-shrink: 0;
+    }
+    .spinner.active { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Error display ───────────────────────────────────────────── */
+    .error-box {
+      background: var(--red-dim);
+      border: 1px solid #6b2020;
+      border-radius: var(--radius);
+      padding: 12px;
+      color: var(--red);
+      font-family: var(--mono);
+      font-size: 12px;
+      white-space: pre-wrap;
+    }
+
+  </style>
+</head>
+<body>
+
+<!-- ── Header ──────────────────────────────────────────────────── -->
+<header>
+  <div class="header-title">
+    <div class="logo">🤖</div>
+    CoreSmart GenAI - Developer Course
+    <span class="week-badge">Week 1</span>
+    <span class="header-sub">- ReleaseBot</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn-ghost" onclick="window.open('http://localhost:8000/readme','_blank')">📖 README</button>
+    <div id="health-chip" onclick="checkHealth()" title="Click to re-check">
+      <span class="dot"></span>
+      <span id="health-text">Checking…</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main ────────────────────────────────────────────────────── -->
+<main>
+
+  <!-- Left panel -->
+  <div class="left-panel">
+
+    <div class="panel-section" style="flex:1; display:flex; flex-direction:column;">
+      <div class="input-row">
+        <label style="margin:0">Release Notes</label>
+        <button class="btn-demo" onclick="fillDemo()">↺ Fill Demo</button>
+      </div>
+      <textarea id="notes" placeholder="Paste engineering release notes here…"></textarea>
+    </div>
+
+    <div class="panel-section">
+      <label>Send To Email</label>
+      <input type="email" id="recipient" placeholder="team@example.com" />
+    </div>
+
+    <div class="action-btns">
+      <button class="btn-primary" id="btn-summarize" onclick="doSummarize()">
+        <span id="spin-s" class="spinner"></span>
+        📋 &nbsp;Summarize + Email
+      </button>
+      <button class="btn-secondary" id="btn-stream" onclick="doStream()">
+        <span id="spin-st" class="spinner"></span>
+        ⚡ &nbsp;Stream Summary
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Right panel -->
+  <div class="right-panel">
+
+    <!-- Output pane -->
+    <div class="pane pane-output">
+      <div class="pane-header">
+        Output
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="output-tag" style="font-size:11px;color:var(--text-muted)"></span>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px;display:none" id="btn-format" onclick="toggleFormat()">{ } Format</button>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearOutput()">✕ Clear</button>
+        </div>
+      </div>
+      <div class="pane-body" id="output-body">
+        <span class="placeholder-msg">Response will appear here…</span>
+      </div>
+    </div>
+
+    <!-- Logs pane -->
+    <div class="pane pane-logs">
+      <div class="pane-header">
+        Logs
+        <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearLogs()">✕ Clear</button>
+      </div>
+      <div class="pane-body" id="logs-body">
+        <span class="placeholder-msg">Request logs will appear here…</span>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ── Script ───────────────────────────────────────────────────── -->
+<script>
+  const API = 'http://localhost:8000';
+
+  // ── Format toggle state ──────────────────────────────────────────
+  let _rawOutputText  = '';   // last raw text from stream or summarize
+  let _isFormatted    = false;
+
+  function _showFormatBtn(show) {
+    document.getElementById('btn-format').style.display = show ? '' : 'none';
+    _isFormatted = false;
+    document.getElementById('btn-format').textContent = '{ } Format';
+  }
+
+  function toggleFormat() {
+    const body = document.getElementById('output-body');
+    const btn  = document.getElementById('btn-format');
+
+    if (!_isFormatted) {
+      // Try to strip markdown fences and parse as JSON
+      let src = _rawOutputText.trim();
+      if (src.startsWith('```')) {
+        const inner = src.split('```')[1] || '';
+        src = inner.startsWith('json') ? inner.slice(4).trim() : inner.trim();
+      }
+      try {
+        const parsed = JSON.parse(src);
+        body.innerHTML = `<pre>${highlightJSON(parsed)}</pre>`;
+        _isFormatted = true;
+        btn.textContent = '≡ Raw';
+        addLog('info', 'Output formatted as JSON.');
+      } catch {
+        addLog('warn', 'Could not parse output as JSON - nothing to format.');
+      }
+    } else {
+      // Restore raw text
+      body.textContent = _rawOutputText;
+      _isFormatted = false;
+      btn.textContent = '{ } Format';
+    }
+  }
+
+  const DEMO_NOTES =
+    `v2.4 - Fixed login retry loop on Safari that caused users to be locked out after 3 failed attempts.\n` +
+    `Adjusted session token TTL from 1 h to 4 h to reduce re-authentication friction.\n` +
+    `Added experimental dark mode toggle in user settings (opt-in only).\n` +
+    `Patched XSS vulnerability in the comment renderer - update strongly recommended for all deployments.\n` +
+    `Bumped Node.js runtime from 18.x to 20.11 LTS.\n` +
+    `Deprecated the legacy /v1/auth endpoint; removal scheduled for v3.0 in Q3.`;
+
+  // ── Health check ────────────────────────────────────────────────
+  async function checkHealth() {
+    const chip = document.getElementById('health-chip');
+    const txt  = document.getElementById('health-text');
+    chip.className = '';
+    txt.textContent = 'Checking…';
+    try {
+      const r    = await fetch(`${API}/health`);
+      const data = await r.json();
+      chip.className  = 'online';
+      txt.textContent = `Online · ${data.model}`;
+      addLog('success', `Health OK - model: ${data.model}`);
+    } catch (e) {
+      chip.className  = 'offline';
+      txt.textContent = 'Offline';
+      addLog('error', `Health check failed - is the server running? (${e.message})`);
+    }
+  }
+
+  // ── Fill demo ────────────────────────────────────────────────────
+  function fillDemo() {
+    document.getElementById('notes').value = DEMO_NOTES;
+    addLog('info', 'Demo release notes loaded.');
+  }
+
+  // ── Clear helpers ────────────────────────────────────────────────
+  function clearOutput() {
+    document.getElementById('output-body').innerHTML =
+      '<span class="placeholder-msg">Response will appear here…</span>';
+    document.getElementById('output-tag').textContent = '';
+    _rawOutputText = '';
+    _showFormatBtn(false);
+  }
+
+  function clearLogs() {
+    document.getElementById('logs-body').innerHTML =
+      '<span class="placeholder-msg">Request logs will appear here…</span>';
+  }
+
+  // ── Log helper ───────────────────────────────────────────────────
+  function addLog(level, msg) {
+    const body = document.getElementById('logs-body');
+    const ph   = body.querySelector('.placeholder-msg');
+    if (ph) ph.remove();
+
+    const now  = new Date().toLocaleTimeString('en-GB', {hour12: false});
+    const div  = document.createElement('div');
+    div.className = `log-entry log-${level}`;
+    div.innerHTML =
+      `<span class="log-ts">${now}</span>` +
+      `<span class="log-level">${level.toUpperCase()}</span>` +
+      `<span class="log-msg">${escHtml(msg)}</span>`;
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  // ── JSON syntax highlight ────────────────────────────────────────
+  function highlightJSON(obj) {
+    const str = JSON.stringify(obj, null, 2);
+    return escHtml(str).replace(
+      /(&quot;(?:\\u[0-9a-fA-F]{4}|\\[^u]|[^\\&])*&quot;(?:\s*:)?|\b(?:true|false)\b|\bnull\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      match => {
+        let c = 'n';
+        if (match.startsWith('&quot;'))
+          c = match.endsWith(':') ? 'k' : 's';
+        else if (match === 'true' || match === 'false') c = 'b';
+        else if (match === 'null') c = 'null';
+        return `<span class="j-${c}">${match}</span>`;
+      }
+    );
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // ── Loading state ────────────────────────────────────────────────
+  function setLoading(active) {
+    const bs = document.getElementById('btn-summarize');
+    const bst= document.getElementById('btn-stream');
+    const ss = document.getElementById('spin-s');
+    const sst= document.getElementById('spin-st');
+    bs.disabled = bst.disabled = active;
+    ss.classList.toggle('active', active);
+    sst.classList.toggle('active', active);
+  }
+
+  // ── Summarize (structured + tool call) ──────────────────────────
+  async function doSummarize() {
+    const notes     = document.getElementById('notes').value.trim();
+    const recipient = document.getElementById('recipient').value.trim();
+    if (!notes)     { addLog('warn', 'Release notes are empty.'); return; }
+    if (!recipient) { addLog('warn', 'Recipient email is required for Summarize.'); return; }
+
+    clearOutput();
+    setLoading(true);
+    addLog('info', `POST /summarize  →  ${recipient}`);
+    document.getElementById('output-tag').textContent = '/summarize';
+
+    try {
+      const r = await fetch(`${API}/summarize`, {
+        method:  'POST',
+        headers: {'Content-Type': 'application/json'},
+        body:    JSON.stringify({release_notes: notes, recipient}),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || r.statusText);
+
+      document.getElementById('output-body').innerHTML =
+        `<pre>${highlightJSON(data)}</pre>`;
+
+      const risk  = data.summary?.risk_level ?? '?';
+      const tools = data.tool_calls?.length ?? 0;
+      addLog('success', `Done - risk: ${risk}, tool_calls: ${tools}`);
+      if (tools > 0) addLog('info', `Email sent via send_email tool ✉`);
+      // Store raw JSON string so Format button can toggle back to it
+      _rawOutputText = JSON.stringify(data, null, 2);
+      _showFormatBtn(false); // already formatted; no need for the button
+    } catch (e) {
+      document.getElementById('output-body').innerHTML =
+        `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── Stream ───────────────────────────────────────────────────────
+  async function doStream() {
+    const notes     = document.getElementById('notes').value.trim();
+    const recipient = document.getElementById('recipient').value.trim();
+    if (!notes) { addLog('warn', 'Release notes are empty.'); return; }
+
+    clearOutput();
+    setLoading(true);
+    addLog('info', 'POST /summarize-stream (SSE)');
+    document.getElementById('output-tag').textContent = '/summarize-stream';
+
+    const body = document.getElementById('output-body');
+    body.textContent = '';
+    body.classList.add('streaming');
+    let text = '';
+
+    try {
+      const r = await fetch(`${API}/summarize-stream`, {
+        method:  'POST',
+        headers: {'Content-Type': 'application/json'},
+        body:    JSON.stringify({release_notes: notes, recipient: recipient || undefined}),
+      });
+      if (!r.ok) {
+        const err = await r.json();
+        throw new Error(err.detail || r.statusText);
+      }
+
+      const reader  = r.body.getReader();
+      const decoder = new TextDecoder();
+      let buf = '';
+
+      while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, {stream: true});
+        const lines = buf.split('\n');
+        buf = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const payload = line.slice(6).trim();
+          if (payload === '[DONE]') {
+            addLog('success', 'Stream complete.');
+            _rawOutputText = text;
+            _showFormatBtn(true);
+            break;
+          }
+          try {
+            const chunk = JSON.parse(payload);
+            if (chunk.delta) {
+              text += chunk.delta;
+              body.textContent = text;
+            }
+            if (chunk.error) throw new Error(chunk.error);
+          } catch (parseErr) { /* partial JSON - skip */ }
+        }
+      }
+    } catch (e) {
+      body.innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally {
+      body.classList.remove('streaming');
+      setLoading(false);
+    }
+  }
+
+  // ── Init ─────────────────────────────────────────────────────────
+  checkHealth();
+</script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 680" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="0" dy="2" result="off"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#475569"/>
+    </marker>
+    <marker id="arrowP" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#EC4899"/>
+    </marker>
+    <marker id="arrowA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#F59E0B"/>
+    </marker>
+    <marker id="arrowG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+    </marker>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#FEF3C7"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1100" height="680" fill="url(#bg)"/>
+
+  <text x="550" y="46" text-anchor="middle" font-size="26" font-weight="700" fill="#0F172A">Tool-Call: Single Round-Trip</text>
+  <text x="550" y="70" text-anchor="middle" font-size="14" fill="#64748B">Tool arguments are the structured output - no second API call needed.</text>
+
+  <!-- Lane headers -->
+  <g font-size="13" font-weight="700">
+    <g filter="url(#shadow)"><rect x="60" y="95" width="150" height="42" rx="10" fill="#FFFFFF" stroke="#94A3B8" stroke-width="1.5"/></g>
+    <text x="135" y="121" text-anchor="middle" fill="#334155">User / Browser</text>
+
+    <g filter="url(#shadow)"><rect x="290" y="95" width="150" height="42" rx="10" fill="#EEF2FF" stroke="#4F46E5" stroke-width="1.5"/></g>
+    <text x="365" y="121" text-anchor="middle" fill="#1E1B4B">App (FastAPI)</text>
+
+    <g filter="url(#shadow)"><rect x="520" y="95" width="160" height="42" rx="10" fill="#FDF2F8" stroke="#EC4899" stroke-width="1.5"/></g>
+    <text x="600" y="121" text-anchor="middle" fill="#500724">Model (OpenAI)</text>
+
+    <g filter="url(#shadow)"><rect x="760" y="95" width="160" height="42" rx="10" fill="#FFFBEB" stroke="#F59E0B" stroke-width="1.5"/></g>
+    <text x="840" y="121" text-anchor="middle" fill="#451A03">Tool (Gmail SMTP)</text>
+  </g>
+
+  <!-- Lane lines -->
+  <line x1="135" y1="143" x2="135" y2="600" stroke="#CBD5E1" stroke-width="1.5" stroke-dasharray="3 4"/>
+  <line x1="365" y1="143" x2="365" y2="600" stroke="#CBD5E1" stroke-width="1.5" stroke-dasharray="3 4"/>
+  <line x1="600" y1="143" x2="600" y2="600" stroke="#CBD5E1" stroke-width="1.5" stroke-dasharray="3 4"/>
+  <line x1="840" y1="143" x2="840" y2="600" stroke="#CBD5E1" stroke-width="1.5" stroke-dasharray="3 4"/>
+
+  <!-- Step 1: User → App -->
+  <g>
+    <circle cx="38" cy="185" r="16" fill="#4F46E5"/>
+    <text x="38" y="190" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="700">1</text>
+    <line x1="135" y1="185" x2="360" y2="185" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="248" y="175" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">POST /summarize</text>
+    <text x="248" y="198" text-anchor="middle" font-size="11" fill="#64748B">{release_notes, recipient}</text>
+  </g>
+
+  <!-- Step 2: App → Model (with tool_choice) -->
+  <g>
+    <circle cx="38" cy="255" r="16" fill="#4F46E5"/>
+    <text x="38" y="260" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="700">2</text>
+    <line x1="365" y1="255" x2="595" y2="255" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="480" y="244" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">prompt + tool schemas</text>
+    <text x="480" y="268" text-anchor="middle" font-size="11" fill="#64748B">tool_choice: force send_email</text>
+  </g>
+
+  <!-- Step 3: Model returns tool_call with structured args -->
+  <g>
+    <circle cx="38" cy="340" r="16" fill="#EC4899"/>
+    <text x="38" y="345" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="700">3</text>
+    <line x1="600" y1="340" x2="370" y2="340" stroke="#EC4899" stroke-width="2.5" marker-end="url(#arrowP)"/>
+    <text x="480" y="328" text-anchor="middle" font-size="12" font-weight="700" fill="#831843">finish_reason: "tool_calls"</text>
+    <text x="480" y="355" text-anchor="middle" font-size="11" fill="#64748B">args: {to, headline, bullets, risk_level}</text>
+  </g>
+
+  <!-- Callout: args = structured output -->
+  <g filter="url(#shadow)">
+    <rect x="530" y="370" width="310" height="44" rx="10" fill="#FDF2F8" stroke="#EC4899" stroke-width="1.5"/>
+  </g>
+  <text x="685" y="388" text-anchor="middle" font-size="12" font-weight="700" fill="#831843">✦ These args ARE the structured output</text>
+  <text x="685" y="406" text-anchor="middle" font-size="11" fill="#475569">No text parsing. No second API call.</text>
+
+  <!-- Step 4: App → Tool -->
+  <g>
+    <circle cx="38" cy="440" r="16" fill="#F59E0B"/>
+    <text x="38" y="445" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="700">4</text>
+    <line x1="365" y1="440" x2="755" y2="440" stroke="#F59E0B" stroke-width="2" marker-end="url(#arrowA)"/>
+    <text x="560" y="430" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">execute_tool("send_email", args)</text>
+  </g>
+
+  <!-- Step 5: Tool → App -->
+  <g>
+    <circle cx="38" cy="490" r="16" fill="#F59E0B"/>
+    <text x="38" y="495" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="700">5</text>
+    <line x1="840" y1="490" x2="370" y2="490" stroke="#F59E0B" stroke-width="2" marker-end="url(#arrowA)"/>
+    <text x="605" y="480" text-anchor="middle" font-size="12" font-weight="600" fill="#334155">{"success": true, "to": "...", "subject": "..."}</text>
+  </g>
+
+  <!-- Step 6: App builds response and returns to user -->
+  <g>
+    <circle cx="38" cy="550" r="16" fill="#10B981"/>
+    <text x="38" y="555" text-anchor="middle" fill="#FFFFFF" font-size="14" font-weight="700">6</text>
+    <line x1="365" y1="550" x2="140" y2="550" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrowG)"/>
+    <text x="252" y="539" text-anchor="middle" font-size="12" font-weight="700" fill="#065F46">{summary, tool_calls}</text>
+    <text x="252" y="563" text-anchor="middle" font-size="11" fill="#64748B">ReleaseSummary built from args - no parsing</text>
+  </g>
+
+  <!-- Footer callouts -->
+  <g filter="url(#shadow)">
+    <rect x="55" y="610" width="440" height="52" rx="10" fill="#FFFFFF" stroke="#4F46E5" stroke-width="1.5"/>
+  </g>
+  <text x="275" y="630" text-anchor="middle" font-size="12" font-weight="700" fill="#1E1B4B">Why single round-trip works here:</text>
+  <text x="275" y="646" text-anchor="middle" font-size="11" fill="#475569">With strict: true, OpenAI constrains arguments to the schema</text>
+  <text x="275" y="659" text-anchor="middle" font-size="11" fill="#475569">during generation - always parseable, always in shape.</text>
+
+  <g filter="url(#shadow)">
+    <rect x="610" y="610" width="440" height="52" rx="10" fill="#FFFFFF" stroke="#F59E0B" stroke-width="1.5"/>
+  </g>
+  <text x="830" y="630" text-anchor="middle" font-size="12" font-weight="700" fill="#451A03">Two questions for every tool:</text>
+  <text x="830" y="650" text-anchor="middle" font-size="11" fill="#475569">"What if called twice?" (idempotency) · "What's the blast radius?" (safety)</text>
+</svg>
