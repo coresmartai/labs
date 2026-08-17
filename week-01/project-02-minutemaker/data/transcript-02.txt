@@ -1,0 +1,14 @@
+[14:01] ravi: sorry i'm late, coffee machine saga again
+[14:02] lena: np. ok main thing today, we need to pick the analytics vendor. i'm leaning Mixpanel
+[14:03] tom: mixpanel's fine but pricy. anyway did anyone catch the game last night
+[14:03] lena: focus tom
+[14:04] aisha: i used Amplitude at my last place, honestly smoother for funnels
+[14:05] lena: ok let's just go Mixpanel, i'll set up the account today
+[14:06] ravi: wait before you do, amplitude has a startup plan thats basically free at our volume
+[14:07] lena: huh. ok that changes it. fine, Amplitude then, not Mixpanel. aisha can you own setup since youve used it
+[14:07] aisha: yep i'll get it going this week
+[14:09] tom: oh also the launch, are we still thinking the 12th
+[14:10] ravi: 12th is a friday, bad for launches. let's do monday the 15th
+[14:11] lena: agreed, 15th it is
+[14:12] tom: cool, i'll update the calendar and tell marketing
+[14:12] lena: thanks. thats it, go get lunch

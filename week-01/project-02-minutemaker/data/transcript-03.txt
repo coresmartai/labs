@@ -1,0 +1,7 @@
+[09:00] omar: morning all, quick standup
+[09:00] jenny: morning
+[09:01] omar: still working through the api migration, about halfway, no blockers
+[09:02] jenny: cool. i finished the docs cleanup yesterday, nothing else on my plate really
+[09:02] kofi: same here, just monitoring the dashboards, all green
+[09:03] omar: nice, nothing urgent then. carry on, talk tomorrow
+[09:03] jenny: sounds good

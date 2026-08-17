@@ -1,0 +1,12 @@
+{
+  "attendees": ["priya", "marcus", "sana", "devon"],
+  "decisions": [
+    "Beta ships to 50 users next week",
+    "Weekly metrics email goes out every Monday"
+  ],
+  "action_items": [
+    {"task": "Sign the vendor contract", "owner": "marcus", "due": "Friday"},
+    {"task": "Redesign the pricing page", "owner": "sana", "due": null},
+    {"task": "Set up the weekly metrics email", "owner": "devon", "due": "Monday"}
+  ]
+}
