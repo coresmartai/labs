@@ -39,7 +39,7 @@ labs/
                                       students build the service by copying and
                                       re-pointing ReleaseBot's app/.
       data/                           The five test transcripts and
-                                      example-output.json (transcript-01's
+                                      sample_output.json (transcript-01's
                                       correct minutes). transcript-04 is
                                       intentionally blank (the empty-input case).
       README_TEMPLATE.md              Rename to README.md in your project and
