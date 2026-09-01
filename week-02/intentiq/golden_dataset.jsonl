@@ -1,0 +1,30 @@
+{"id": "001", "input": "can you cancel my plan", "expected": "cancel_subscription", "note": "happy path"}
+{"id": "002", "input": "I'd like to cancel my subscription effective today.", "expected": "cancel_subscription", "note": "polite phrasing"}
+{"id": "003", "input": "pls cancel im not using it anymore", "expected": "cancel_subscription", "note": "informal"}
+{"id": "004", "input": "how do I unsubscribe from your service", "expected": "cancel_subscription", "note": "synonym"}
+{"id": "005", "input": "i want my money back", "expected": "request_refund", "note": "happy path"}
+{"id": "006", "input": "refund pls i hate this app", "expected": "request_refund", "note": "slang + sentiment"}
+{"id": "007", "input": "Can I get a refund for last month's charge? I never used it.", "expected": "request_refund", "note": "billing context"}
+{"id": "008", "input": "this is broken, i want a refund", "expected": "request_refund", "note": "complaint + ask"}
+{"id": "009", "input": "do you accept paypal?", "expected": "payment_question", "note": "edge: pre-purchase"}
+{"id": "010", "input": "what payment methods are supported", "expected": "payment_question", "note": "happy path"}
+{"id": "011", "input": "Why was I charged twice last week?", "expected": "payment_question", "note": "billing dispute"}
+{"id": "012", "input": "can I pay in EUR instead of USD", "expected": "payment_question", "note": "currency"}
+{"id": "013", "input": "When does the next invoice run?", "expected": "payment_question", "note": "billing cycle"}
+{"id": "014", "input": "asdf hello?", "expected": "unknown", "note": "junk input"}
+{"id": "015", "input": "test", "expected": "unknown", "note": "junk input"}
+{"id": "016", "input": "hi", "expected": "unknown", "note": "greeting only"}
+{"id": "017", "input": "wow this is awesome", "expected": "unknown", "note": "praise, no intent"}
+{"id": "018", "input": "Stop charging my card and give me back what I paid.", "expected": "request_refund", "note": "ambiguous: refund OR cancel - humans may disagree"}
+{"id": "019", "input": "I no longer need the premium tier, please refund the difference.", "expected": "request_refund", "note": "downgrade + refund"}
+{"id": "020", "input": "When can I cancel without being charged again?", "expected": "cancel_subscription", "note": "timing question"}
+{"id": "021", "input": "Hey team, I'd like to switch to monthly billing.", "expected": "payment_question", "note": "billing change"}
+{"id": "022", "input": "I clicked cancel three times and it still bills me", "expected": "cancel_subscription", "note": "complaint + intent"}
+{"id": "023", "input": "is there a free trial?", "expected": "payment_question", "note": "pricing pre-sales"}
+{"id": "024", "input": "Cancel everything. Now.", "expected": "cancel_subscription", "note": "emotional"}
+{"id": "025", "input": "give me my $19 back you scammers", "expected": "request_refund", "note": "hostile slang"}
+{"id": "026", "input": "Do you support Apple Pay or Google Pay?", "expected": "payment_question", "note": "specific methods"}
+{"id": "027", "input": "I closed my account but I'm still seeing charges", "expected": "request_refund", "note": "post-cancel issue"}
+{"id": "028", "input": "ok thanks bye", "expected": "unknown", "note": "farewell, no intent"}
+{"id": "029", "input": "Cancel my plan AND refund this month please.", "expected": "cancel_subscription", "note": "compound intent - primary action wins"}
+{"id": "030", "input": "Does the team plan include all features the pro plan has?", "expected": "payment_question", "note": "plan comparison"}

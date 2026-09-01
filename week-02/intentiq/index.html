@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<!--
+  CoreSmart GenAI - Developer Course Week 2 · IntentIQ
+  ======================================================
+  Built from index.template.html (see _templates/UI_DESIGN_GUIDE.md).
+  CORE sections are copied verbatim from the template and must not be changed.
+  Week-specific content lives only inside WEEK-SPECIFIC START/END zones.
+
+  Intentional deviations from the template (documented, not force-fit):
+    1. id="notes" textarea is labelled "Message to Classify" - the primary
+       input is a classifier message, not release notes. fillDemo() still
+       targets #notes so the CORE function works unchanged.
+    2. No recipient-email section - Week 2 is a classifier, not an email
+       service. The email field and its validation are not applicable.
+    3. Benchmark streaming uses structured JSON events (type / provider /
+       done / accuracy) rather than the {delta} token-stream format. The
+       SSE reading boilerplate is identical; only the payload shape differs.
+    4. Left panel uses overflow-y:auto (WEEK-SPECIFIC override) to keep
+       the provider-selector cards visible on shorter screens.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoreSmart GenAI - Developer Course Week 2</title>
+  <style>
+    
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0d1117;
+      --surface:     #161b22;
+      --surface-2:   #21262d;
+      --surface-3:   #2d333b;
+      --border:      #30363d;
+      --text:        #e6edf3;
+      --text-muted:  #7d8590;
+      --blue:        #58a6ff;
+      --blue-dim:    #1f3a5f;
+      --green:       #3fb950;
+      --green-dim:   #1a3a28;
+      --red:         #f85149;
+      --red-dim:     #3d1a1a;
+      --orange:      #d29922;
+      --radius:      8px;
+      --mono:        'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; height: 52px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 15px; font-weight: 600; color: var(--text);
+    }
+    .header-title .logo {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #1a56db, #7e3af2);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+    }
+    .week-badge {
+      background: var(--blue-dim); color: var(--blue);
+      font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 20px;
+      border: 1px solid #1f4080;
+    }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+
+    button {
+      cursor: pointer; border: none; border-radius: var(--radius);
+      font-size: 13px; font-weight: 500;
+      transition: opacity 0.15s, transform 0.1s;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .btn-ghost {
+      background: transparent; color: var(--text-muted);
+      border: 1px solid var(--border); padding: 6px 12px;
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+
+    .btn-primary { background: #1a56db; color: #fff; padding: 8px 16px; }
+    .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+
+    .btn-secondary {
+      background: var(--surface-2); color: var(--text);
+      border: 1px solid var(--border); padding: 8px 16px;
+    }
+    .btn-secondary:hover:not(:disabled) { background: var(--surface-3); }
+
+    .btn-demo {
+      background: transparent; color: var(--blue);
+      border: 1px solid var(--blue-dim); padding: 5px 12px; font-size: 12px;
+    }
+    .btn-demo:hover:not(:disabled) { background: var(--blue-dim); }
+
+    #health-chip {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px;
+      font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text-muted);
+    }
+    #health-chip:hover { background: var(--surface-3); }
+    #health-chip.online  { color: var(--green); border-color: #1a4a2e; }
+    #health-chip.offline { color: var(--red);   border-color: #4a1a1a; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+    .online  .dot { background: var(--green); box-shadow: 0 0 6px #3fb95088; animation: pulse 2s infinite; }
+    .offline .dot { background: var(--red); }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    main {
+      display: grid; grid-template-columns: 380px 1fr;
+      flex: 1; overflow: hidden;
+    }
+
+    .left-panel {
+      display: flex; flex-direction: column;
+      border-right: 1px solid var(--border); overflow: hidden;
+    }
+
+    .panel-section { padding: 16px; border-bottom: 1px solid var(--border); }
+    .panel-section:last-child { border-bottom: none; }
+
+    label {
+      display: block; font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); margin-bottom: 8px;
+    }
+
+    textarea, input[type="email"], input[type="text"], select {
+      width: 100%; background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text); font-size: 13px; font-family: inherit;
+      outline: none; transition: border-color 0.15s;
+    }
+    textarea { resize: none; }
+    textarea:focus, input:focus, select:focus {
+      border-color: var(--blue); box-shadow: 0 0 0 3px #1a56db22;
+    }
+
+    #notes {
+      flex: 1; min-height: 0; height: 0;
+      padding: 10px 12px; line-height: 1.6;
+    }
+
+    input[type="email"], input[type="text"] { padding: 8px 12px; height: 38px; }
+    select { padding: 8px 12px; height: 38px; cursor: pointer; }
+    select option { background: var(--surface-2); }
+
+    .input-row {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 8px;
+    }
+
+    .action-btns { display: flex; flex-direction: column; gap: 8px; padding: 16px; }
+    .action-btns button { width: 100%; justify-content: center; }
+
+    .right-panel { display: flex; flex-direction: column; overflow: hidden; }
+
+    .pane { display: flex; flex-direction: column; overflow: hidden; }
+    .pane-output { flex: 1; border-bottom: 1px solid var(--border); }
+    .pane-logs   { height: 200px; flex-shrink: 0; }
+
+    .pane-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); flex-shrink: 0;
+    }
+
+    .pane-body {
+      flex: 1; overflow-y: auto; padding: 16px;
+      font-family: var(--mono); font-size: 13px; line-height: 1.6;
+    }
+    .pane-body::-webkit-scrollbar { width: 6px; }
+    .pane-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .placeholder-msg { color: var(--text-muted); font-family: inherit; font-size: 13px; font-style: italic; }
+
+    .j-k    { color: #79c0ff; }
+    .j-s    { color: #a5d6ff; }
+    .j-n    { color: #ffa657; }
+    .j-b    { color: #7ee787; }
+    .j-null { color: var(--text-muted); }
+
+    #output-body.streaming::after {
+      content: '▋'; animation: blink 0.8s step-end infinite; color: var(--blue);
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .log-entry { display: flex; gap: 10px; padding: 2px 0; font-size: 12px; line-height: 1.5; }
+    .log-ts    { color: var(--text-muted); flex-shrink: 0; }
+    .log-level { font-weight: 700; flex-shrink: 0; width: 50px; }
+    .log-msg   { color: var(--text); word-break: break-word; }
+    .log-info    .log-level { color: var(--blue); }
+    .log-success .log-level { color: var(--green); }
+    .log-warn    .log-level { color: var(--orange); }
+    .log-error   .log-level { color: var(--red); }
+
+    .spinner {
+      display: none; width: 14px; height: 14px;
+      border: 2px solid var(--border); border-top-color: var(--blue);
+      border-radius: 50%; animation: spin 0.6s linear infinite; flex-shrink: 0;
+    }
+    .spinner.active { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: var(--red-dim); border: 1px solid #6b2020;
+      border-radius: var(--radius); padding: 12px;
+      color: var(--red); font-family: var(--mono); font-size: 12px; white-space: pre-wrap;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       WEEK-SPECIFIC START - add new CSS classes here only
+       ══════════════════════════════════════════════════════════════ */
+
+    /* Extra colour tokens not in the core palette */
+    :root {
+      --orange-dim: #3d2a00;
+      --purple:     #bc8cff;
+      --purple-dim: #2d1f4a;
+    }
+
+    /* Left panel scroll - needed so provider cards are reachable on
+       shorter viewports (deviation: core sets overflow:hidden) */
+    .left-panel { overflow-y: auto; }
+    .left-panel::-webkit-scrollbar { width: 4px; }
+    .left-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* Demo message pills - supplement to the Fill Demo button */
+    .demo-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+    .pill {
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 20px; color: var(--text-muted);
+      font-size: 11px; padding: 3px 9px; cursor: pointer; transition: all 0.15s;
+    }
+    .pill:hover { background: var(--surface-2); color: var(--text); border-color: var(--blue-dim); }
+
+    /* Provider selector */
+    .provider-group { display: flex; flex-direction: column; gap: 6px; }
+    .provider-opt input[type="radio"] { display: none; }
+    .provider-card {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px; background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      cursor: pointer; transition: all 0.15s; user-select: none;
+    }
+    .provider-card:hover { background: var(--surface-3); }
+    .provider-opt input:checked + .provider-card { border-color: var(--blue); background: var(--blue-dim); }
+    .p-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .p-dot  { width: 6px; height: 6px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+    .provider-opt input:checked + .provider-card .p-dot { background: var(--blue); }
+    /* single-line card: model name (left, primary) · provider (right, muted) */
+    .p-name     { font-size: 13px; font-weight: 700; color: var(--text); font-family: var(--mono); flex: 1; }
+    .p-provider { font-size: 11px; color: var(--text-muted); flex-shrink: 0; padding-left: 8px; }
+    .local-badge {
+      font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px;
+      background: var(--orange-dim); color: var(--orange); border: 1px solid #5a3a00;
+    }
+
+    /* Classify result card */
+    .result-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; font-family: inherit;
+    }
+    .result-header {
+      padding: 14px 16px; display: flex; align-items: center;
+      justify-content: space-between; border-bottom: 1px solid var(--border);
+    }
+    .intent-label { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+    .intent-cancel  { color: var(--red); }
+    .intent-refund  { color: var(--orange); }
+    .intent-payment { color: var(--blue); }
+    .intent-unknown { color: var(--text-muted); }
+    .provider-chip { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
+    .chip-openai     { background: #1a3a28;          color: var(--green);  border: 1px solid #1a5a38; }
+    .chip-nano { background: var(--purple-dim); color: var(--purple); border: 1px solid #5a2d9a; }
+    .chip-ollama     { background: var(--orange-dim); color: var(--orange); border: 1px solid #5a3a00; }
+    .result-metrics { display: grid; grid-template-columns: repeat(4, 1fr); padding: 14px 16px; }
+    .metric { display: flex; flex-direction: column; gap: 4px; padding: 0 12px; }
+    .metric:first-child { padding-left: 0; }
+    .metric + .metric { border-left: 1px solid var(--border); }
+    .m-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); font-family: inherit; }
+    .m-value { font-size: 15px; font-weight: 600; color: var(--text); }
+    .m-unit  { font-size: 11px; color: var(--text-muted); }
+
+    /* Benchmark streaming progress bars */
+    .bench-running { font-family: inherit; }
+    .bench-running-title {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 14px;
+    }
+    .pi {
+      display: flex; align-items: center; gap: 12px;
+      padding: 9px 0; border-bottom: 1px solid var(--border);
+    }
+    .pi:last-child { border-bottom: none; }
+    .pi-name { display: flex; align-items: center; gap: 7px; width: 130px; flex-shrink: 0; font-size: 13px; font-weight: 600; font-family: var(--mono); }
+    .pi-bar-wrap { flex: 1; }
+    .pi-bar-track { height: 5px; background: var(--surface-3); border-radius: 3px; overflow: hidden; }
+    .pi-bar-fill  { height: 100%; border-radius: 3px; width: 0%; transition: width 0.35s ease; }
+    .pi-bar-openai     { background: var(--green); }
+    .pi-bar-nano { background: var(--purple); }
+    .pi-bar-ollama     { background: var(--orange); }
+    .pi-stats { width: 130px; flex-shrink: 0; font-size: 12px; text-align: right; font-family: var(--mono); display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+    .pi-count-val { color: var(--text); font-weight: 600; }
+    .pi-acc-val   { color: var(--text-muted); min-width: 42px; text-align: right; }
+    .pi-status { width: 68px; flex-shrink: 0; font-size: 11px; text-align: right; font-weight: 600; }
+    .pi-status.waiting { color: var(--text-muted); }
+    .pi-status.running { color: var(--blue); animation: pi-blink 1.2s step-end infinite; }
+    .pi-status.done    { color: var(--green); }
+    @keyframes pi-blink { 50% { opacity: 0.4; } }
+
+    /* Benchmark results table */
+    .bench-wrap  { font-family: inherit; }
+    .bench-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 12px; }
+    .bench-partial-wrap { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); }
+    .bench-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .bench-table th { text-align: left; padding: 6px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+    .bench-table th:not(:first-child) { text-align: right; }
+    .bench-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+    .bench-table td:not(:first-child) { text-align: right; font-family: var(--mono); }
+    .bench-table tr:last-child td { border-bottom: none; }
+    .bench-table tr:hover td { background: var(--surface-2); }
+    .bench-table tr.pending td { opacity: 0.4; }
+    .best-acc  { color: var(--green);  font-weight: 700; }
+    .best-lat  { color: var(--blue);   font-weight: 700; }
+    .best-cost { color: var(--orange); font-weight: 700; }
+    .bp { display: flex; align-items: center; gap: 8px; }
+    .bd { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .bd-openai     { background: var(--green); }
+    .bd-nano { background: var(--purple); }
+    .bd-ollama     { background: var(--orange); }
+    .win-row  { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+    .win-chip { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-family: inherit; }
+    .win-acc  { background: var(--green-dim);  color: var(--green);  border: 1px solid #1a5a38; }
+    .win-lat  { background: var(--blue-dim);   color: var(--blue);   border: 1px solid #1f4080; }
+    .win-cost { background: var(--orange-dim); color: var(--orange); border: 1px solid #5a3a00; }
+
+    /* ══════════════════════════════════════════════════════════════
+       WEEK-SPECIFIC END
+       ══════════════════════════════════════════════════════════════ */
+  </style>
+</head>
+<body>
+
+<!-- ── CORE: Header (change week number only) ──────────────────── -->
+<header>
+  <div class="header-title">
+    <div class="logo">🤖</div>
+    CoreSmart GenAI - Developer Course
+    <span class="week-badge">Week 2</span>
+    <span class="header-sub">- IntentIQ</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn-ghost" onclick="window.open('http://localhost:8000/readme','_blank')">📖 README</button>
+    <div id="health-chip" onclick="checkHealth()" title="Click to re-check">
+      <span class="dot"></span>
+      <span id="health-text">Checking…</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main layout ─────────────────────────────────────────────── -->
+<main>
+
+  <!-- Left panel -->
+  <div class="left-panel">
+
+    <!-- CORE: Primary input - label changed to "Message to Classify";
+         id="notes" kept so fillDemo() and CORE #notes CSS work unchanged.
+         Deviation: primary input is a classifier message, not release notes. -->
+    <div class="panel-section" style="flex:1; display:flex; flex-direction:column;">
+      <div class="input-row">
+        <label style="margin:0">Message to Classify</label>
+        <button class="btn-demo" onclick="fillDemo()">↺ Fill Demo</button>
+      </div>
+      <textarea id="notes" placeholder="Type a message… e.g. 'can you cancel my plan'"></textarea>
+
+      <!-- WEEK-SPECIFIC START: demo pills for quick message loading -->
+      <div class="demo-pills">
+        <button class="pill" onclick="setMsg('can you cancel my plan')">cancel sub</button>
+        <button class="pill" onclick="setMsg('i need a refund asap')">refund</button>
+        <button class="pill" onclick="setMsg('what is my current bill')">billing</button>
+        <button class="pill" onclick="setMsg('please cancel and refund me')">ambiguous</button>
+        <button class="pill" onclick="setMsg('asdf hello')">junk</button>
+      </div>
+      <!-- WEEK-SPECIFIC END -->
+    </div>
+
+    <!-- WEEK-SPECIFIC START: provider selector -->
+    <div class="panel-section">
+      <label>Provider</label>
+      <div class="provider-group">
+
+        <label class="provider-opt" style="margin:0">
+          <input type="radio" name="provider" value="openai" checked>
+          <div class="provider-card">
+            <div class="p-left">
+              <div class="p-dot"></div>
+              <span class="p-name">gpt-5.4-mini</span>
+            </div>
+            <span class="p-provider">openai</span>
+          </div>
+        </label>
+
+        <label class="provider-opt" style="margin:0">
+          <input type="radio" name="provider" value="nano">
+          <div class="provider-card">
+            <div class="p-left">
+              <div class="p-dot"></div>
+              <span class="p-name">gpt-5.4-nano</span>
+            </div>
+            <span class="p-provider">openai</span>
+          </div>
+        </label>
+
+        <label class="provider-opt" style="margin:0">
+          <input type="radio" name="provider" value="ollama">
+          <div class="provider-card">
+            <div class="p-left">
+              <div class="p-dot"></div>
+              <span class="p-name">qwen3:0.6b (local)</span>
+            </div>
+            <span class="p-provider">ollama</span>
+          </div>
+        </label>
+
+      </div>
+    </div>
+    <!-- WEEK-SPECIFIC END -->
+
+    <!-- CORE: Action buttons - week-specific labels replace Summarize/Stream
+         (deviation: original actions not applicable to a classifier app) -->
+    <div class="action-btns">
+      <button class="btn-primary" id="btn-classify" onclick="doClassify()">
+        <span id="spin-c" class="spinner"></span>
+        ⚡ &nbsp;Classify Message
+      </button>
+      <button class="btn-secondary" id="btn-bench" onclick="doBenchmark()">
+        <span id="spin-b" class="spinner"></span>
+        📊 &nbsp;Run Benchmark
+      </button>
+      <!-- WEEK-SPECIFIC START -->
+      <button class="btn-ghost" id="btn-raw" onclick="doRawJson()">
+        { } &nbsp;Classify → Raw JSON
+      </button>
+      <!-- WEEK-SPECIFIC END -->
+    </div>
+
+  </div>
+
+  <!-- Right panel (CORE - do not change structure) -->
+  <div class="right-panel">
+
+    <div class="pane pane-output">
+      <div class="pane-header">
+        Output
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="output-tag" style="font-size:11px;color:var(--text-muted)"></span>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px;display:none" id="btn-format" onclick="toggleFormat()">{ } Format</button>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearOutput()">✕ Clear</button>
+        </div>
+      </div>
+      <div class="pane-body" id="output-body">
+        <span class="placeholder-msg">Response will appear here…</span>
+      </div>
+    </div>
+
+    <div class="pane pane-logs">
+      <div class="pane-header">
+        Logs
+        <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearLogs()">✕ Clear</button>
+      </div>
+      <div class="pane-body" id="logs-body">
+        <span class="placeholder-msg">Request logs will appear here…</span>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  const API = 'http://localhost:8000';
+
+  let _rawOutputText = '';
+  let _isFormatted   = false;
+
+  /** Turn any FastAPI `detail` value into a readable string.
+   *  - string  → returned as-is
+   *  - array   → Pydantic 422: join .msg fields  e.g. "Input should be 'openai'…"
+   *  - object  → JSON.stringify fallback
+   */
+  function _fmtDetail(detail, fallback) {
+    if (!detail) return fallback || 'Unknown error';
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail))
+      return detail.map(d => d.msg || JSON.stringify(d)).join(' | ');
+    return JSON.stringify(detail);
+  }
+
+  function _showFormatBtn(show) {
+    document.getElementById('btn-format').style.display = show ? '' : 'none';
+    _isFormatted = false;
+    document.getElementById('btn-format').textContent = '{ } Format';
+  }
+
+  function toggleFormat() {
+    const body = document.getElementById('output-body');
+    const btn  = document.getElementById('btn-format');
+    if (!_isFormatted) {
+      let src = _rawOutputText.trim();
+      if (src.startsWith('```')) {
+        const inner = src.split('```')[1] || '';
+        src = inner.startsWith('json') ? inner.slice(4).trim() : inner.trim();
+      }
+      try {
+        body.innerHTML = `<pre>${highlightJSON(JSON.parse(src))}</pre>`;
+        _isFormatted = true; btn.textContent = '≡ Raw';
+        addLog('info', 'Output formatted as JSON.');
+      } catch { addLog('warn', 'Could not parse output as JSON.'); }
+    } else {
+      body.textContent = _rawOutputText;
+      _isFormatted = false; btn.textContent = '{ } Format';
+    }
+  }
+
+  async function checkHealth() {
+    const chip = document.getElementById('health-chip');
+    const txt  = document.getElementById('health-text');
+    chip.className = ''; txt.textContent = 'Checking…';
+    try {
+      const r    = await fetch(`${API}/health`);
+      const data = await r.json();
+      const models = [data.openai_model, data.nano_model, data.ollama_model]
+                       .filter(Boolean).join(' · ');
+      chip.className  = 'online';
+      txt.textContent = `Online · ${data.openai_model || data.model}`;
+      addLog('success', `Health OK - ${models}`);
+    } catch (e) {
+      chip.className  = 'offline';
+      txt.textContent = 'Offline';
+      addLog('error', `Health check failed - is the server running? (${e.message})`);
+    }
+  }
+
+  function clearOutput() {
+    document.getElementById('output-body').innerHTML =
+      '<span class="placeholder-msg">Response will appear here…</span>';
+    document.getElementById('output-tag').textContent = '';
+    _rawOutputText = ''; _showFormatBtn(false);
+  }
+
+  function clearLogs() {
+    document.getElementById('logs-body').innerHTML =
+      '<span class="placeholder-msg">Request logs will appear here…</span>';
+  }
+
+  function addLog(level, msg) {
+    const body = document.getElementById('logs-body');
+    const ph   = body.querySelector('.placeholder-msg');
+    if (ph) ph.remove();
+    const now = new Date().toLocaleTimeString('en-GB', {hour12: false});
+    const div = document.createElement('div');
+    div.className = `log-entry log-${level}`;
+    div.innerHTML =
+      `<span class="log-ts">${now}</span>` +
+      `<span class="log-level">${level.toUpperCase()}</span>` +
+      `<span class="log-msg">${escHtml(msg)}</span>`;
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function highlightJSON(obj) {
+    const str = JSON.stringify(obj, null, 2);
+    return escHtml(str).replace(
+      /(&quot;(?:\\u[0-9a-fA-F]{4}|\\[^u]|[^\\&])*&quot;(?:\s*:)?|\b(?:true|false)\b|\bnull\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      match => {
+        let c = 'n';
+        if (match.startsWith('&quot;'))
+          c = match.endsWith(':') ? 'k' : 's';
+        else if (match === 'true' || match === 'false') c = 'b';
+        else if (match === 'null') c = 'null';
+        return `<span class="j-${c}">${match}</span>`;
+      }
+    );
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function setLoading(active) {
+    document.querySelectorAll('.action-btns button').forEach(b => b.disabled = active);
+    document.querySelectorAll('.spinner').forEach(s => s.classList.toggle('active', active));
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     WEEK-SPECIFIC START - replace stubs with real implementations
+     ════════════════════════════════════════════════════════════════ */
+
+  // Maps internal provider IDs → display model names.
+  const PROVIDER_MODEL = {
+    openai: 'gpt-5.4-mini',
+    nano:   'gpt-5.4-nano',
+    ollama: 'qwen3:0.6b',
+  };
+  const pLabel = p => escHtml(PROVIDER_MODEL[p] || p);
+
+  // Primary demo message used by the Fill Demo button
+  const DEMO_NOTES = 'can you cancel my plan';
+
+  // Benchmark streaming state
+  let _bs = { providers: [], n: 30, partial: [] };
+
+  function fillDemo() {
+    document.getElementById('notes').value = DEMO_NOTES;
+    addLog('info', 'Demo message loaded.');
+  }
+
+  // Helper: load a specific pill message
+  function setMsg(text) {
+    document.getElementById('notes').value = text;
+    addLog('info', `Demo: "${text}"`);
+  }
+
+  // Helper: get selected provider
+  function getProvider() {
+    return document.querySelector('input[name="provider"]:checked').value;
+  }
+
+  // ── Classify (primary action) ─────────────────────────────────────
+  async function doClassify() {
+    const text = document.getElementById('notes').value.trim();
+    const prov = getProvider();
+    if (!text) { addLog('warn', 'Message is empty.'); return; }
+
+    clearOutput(); setLoading(true);
+    document.getElementById('output-tag').textContent = `/classify · ${prov}`;
+    addLog('info', `POST /classify  { provider: "${prov}", text: "${text.slice(0,48)}${text.length > 48 ? '…' : ''}" }`);
+
+    try {
+      const r    = await fetch(`${API}/classify`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({text, provider: prov}),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+      renderClassify(data);
+      addLog('success', `label="${data.label}"  conf=${data.confidence.toFixed(3)}  lat=${data.latency_ms.toFixed(0)} ms`);
+    } catch (e) {
+      document.getElementById('output-body').innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally { setLoading(false); }
+  }
+
+  // ── Classify → Raw JSON ───────────────────────────────────────────
+  async function doRawJson() {
+    const text = document.getElementById('notes').value.trim();
+    const prov = getProvider();
+    if (!text) { addLog('warn', 'Message is empty.'); return; }
+
+    clearOutput(); setLoading(true);
+    document.getElementById('output-tag').textContent = `/classify · raw`;
+    addLog('info', `POST /classify raw  provider="${prov}"`);
+
+    try {
+      const r    = await fetch(`${API}/classify`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({text, provider: prov}),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+      document.getElementById('output-body').innerHTML = `<pre>${highlightJSON(data)}</pre>`;
+      _rawOutputText = JSON.stringify(data, null, 2);
+      _showFormatBtn(false); // already rendered as JSON
+      addLog('success', 'Raw JSON response rendered.');
+    } catch (e) {
+      document.getElementById('output-body').innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally { setLoading(false); }
+  }
+
+  // ── Benchmark - streaming SSE ─────────────────────────────────────
+  // Deviation from template streaming pattern: benchmark emits structured
+  // JSON events (type/provider/done/accuracy) rather than {delta} tokens.
+  // The SSE reading boilerplate is identical; only payload handling differs.
+  async function doBenchmark() {
+    clearOutput(); setLoading(true);
+    _bs = { providers: [], n: 30, partial: [] };
+    document.getElementById('output-tag').textContent = '/benchmark-stream';
+    addLog('info', 'GET /benchmark-stream - streaming progress…');
+
+    try {
+      const r = await fetch(`${API}/benchmark-stream`);
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({detail: r.statusText}));
+        throw new Error(_fmtDetail(err.detail, r.statusText));
+      }
+
+      const reader = r.body.getReader(), decoder = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, {stream: true});
+        const lines = buf.split('\n'); buf = lines.pop() ?? '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const payload = line.slice(6).trim();
+          if (payload === '[DONE]') { addLog('success', 'Benchmark stream complete.'); break; }
+          try { handleBenchEvent(JSON.parse(payload)); } catch {}
+        }
+      }
+    } catch (e) {
+      document.getElementById('output-body').innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally { setLoading(false); }
+  }
+
+  // ── SSE event handler ─────────────────────────────────────────────
+  function handleBenchEvent(e) {
+    switch (e.type) {
+
+      case 'start': {
+        _bs.providers = e.providers; _bs.n = e.n;
+        if (!e.providers.length) {
+          document.getElementById('output-body').innerHTML =
+            '<span class="placeholder-msg">No providers active - add API keys to .env and restart.</span>';
+          break;
+        }
+        const rows = e.providers.map(p => `
+          <div class="pi" id="pi-${p}">
+            <div class="pi-name"><div class="bd bd-${p}"></div>${pLabel(p)}</div>
+            <div class="pi-bar-wrap">
+              <div class="pi-bar-track">
+                <div class="pi-bar-fill pi-bar-${p}" id="pibar-${p}" style="width:0%"></div>
+              </div>
+            </div>
+            <div class="pi-stats">
+              <span class="pi-count-val" id="picount-${p}">0/${e.n}</span>
+              <span style="color:var(--border)">·</span>
+              <span class="pi-acc-val" id="piacc-${p}">-</span>
+            </div>
+            <div class="pi-status waiting" id="pistatus-${p}">waiting</div>
+          </div>`).join('');
+
+        document.getElementById('output-body').innerHTML = `
+          <div class="bench-running">
+            <div class="bench-running-title">
+              📊 Benchmark - ${e.n} examples × ${e.providers.length} providers
+            </div>
+            ${rows}
+          </div>
+          <div id="bench-partial"></div>`;
+        addLog('info', `Models: [${e.providers.map(p => PROVIDER_MODEL[p] || p).join(', ')}]`);
+        break;
+      }
+
+      case 'provider_start': {
+        const el = document.getElementById(`pistatus-${e.provider}`);
+        if (el) { el.className = 'pi-status running'; el.textContent = 'running…'; }
+        break;
+      }
+
+      case 'progress': {
+        const pct = (e.done / e.total * 100).toFixed(1);
+        const bar = document.getElementById(`pibar-${e.provider}`);
+        const cnt = document.getElementById(`picount-${e.provider}`);
+        const acc = document.getElementById(`piacc-${e.provider}`);
+        if (bar) bar.style.width = pct + '%';
+        if (cnt) cnt.textContent = `${e.done}/${e.total}`;
+        if (acc) {
+          acc.textContent = `${(e.accuracy * 100).toFixed(1)}%`;
+          acc.style.color = e.accuracy >= 0.9 ? 'var(--green)'
+                          : e.accuracy >= 0.7 ? 'var(--orange)' : 'var(--red)';
+        }
+        break;
+      }
+
+      case 'provider_done': {
+        const bar = document.getElementById(`pibar-${e.provider}`);
+        const st  = document.getElementById(`pistatus-${e.provider}`);
+        if (bar) bar.style.width = '100%';
+        if (st)  { st.className = 'pi-status done'; st.textContent = '✓ done'; }
+        if (e.summary) _bs.partial.push(e.summary);
+        _updatePartialTable();
+        const s = e.summary;
+        if (s) addLog('success',
+          `${PROVIDER_MODEL[e.provider] || e.provider} done - acc=${(s.accuracy*100).toFixed(1)}%  p50=${s.p50_ms.toFixed(0)} ms  $/1K=${s.cost_per_1k_usd.toFixed(4)}`);
+        break;
+      }
+
+      case 'done': {
+        renderBenchmark(e.summaries);
+        break;
+      }
+    }
+  }
+
+  // ── Partial results table (builds up as providers complete) ───────
+  function _updatePartialTable() {
+    const done    = _bs.partial;
+    const pending = _bs.providers.filter(p => !done.find(s => s.provider === p));
+    if (!done.length) return;
+
+    const maxAcc  = Math.max(...done.map(s => s.accuracy));
+    const minP50  = Math.min(...done.filter(s => s.p50_ms > 0).map(s => s.p50_ms));
+    const minCost = Math.min(...done.map(s => s.cost_per_1k_usd));
+
+    const doneRows = done.map(s => `
+      <tr>
+        <td><div class="bp"><div class="bd bd-${s.provider}"></div>${pLabel(s.provider)}</div></td>
+        <td>${s.n}</td>
+        <td class="${done.length > 1 && s.accuracy === maxAcc ? 'best-acc' : ''}">${(s.accuracy*100).toFixed(1)}%</td>
+        <td class="${done.length > 1 && s.p50_ms === minP50 ? 'best-lat' : ''}">${s.p50_ms.toFixed(0)} ms</td>
+        <td>${s.p95_ms.toFixed(0)} ms</td>
+        <td class="${done.length > 1 && s.cost_per_1k_usd === minCost ? 'best-cost' : ''}">$${s.cost_per_1k_usd.toFixed(4)}</td>
+      </tr>`).join('');
+
+    const pendingRows = pending.map(p => `
+      <tr class="pending">
+        <td><div class="bp"><div class="bd bd-${p}"></div>${pLabel(p)}</div></td>
+        <td colspan="5" style="font-family:inherit;color:var(--text-muted)">running…</td>
+      </tr>`).join('');
+
+    const el = document.getElementById('bench-partial');
+    if (!el) return;
+    el.innerHTML = `
+      <div class="bench-partial-wrap">
+        <div class="bench-title">Results - ${done.length} / ${_bs.providers.length} providers complete</div>
+        <table class="bench-table">
+          <thead><tr>
+            <th>Provider</th><th>N</th><th>Accuracy</th><th>p50 lat</th><th>p95 lat</th><th>$/1K</th>
+          </tr></thead>
+          <tbody>${doneRows}${pendingRows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  // ── Final benchmark table (replaces output when done event fires) ─
+  function renderBenchmark(summaries) {
+    if (!summaries.length) {
+      document.getElementById('output-body').innerHTML =
+        '<span class="placeholder-msg">No providers ran - add API keys to .env and restart.</span>';
+      return;
+    }
+    const maxAcc  = Math.max(...summaries.map(s => s.accuracy));
+    const minP50  = Math.min(...summaries.filter(s => s.p50_ms > 0).map(s => s.p50_ms));
+    const minCost = Math.min(...summaries.map(s => s.cost_per_1k_usd));
+
+    const rows = summaries.map(s => `
+      <tr>
+        <td><div class="bp"><div class="bd bd-${s.provider}"></div>${pLabel(s.provider)}</div></td>
+        <td>${s.n}</td>
+        <td class="${s.accuracy === maxAcc ? 'best-acc' : ''}">${(s.accuracy*100).toFixed(1)}%</td>
+        <td class="${s.p50_ms   === minP50 ? 'best-lat' : ''}">${s.p50_ms.toFixed(0)} ms</td>
+        <td>${s.p95_ms.toFixed(0)} ms</td>
+        <td class="${s.cost_per_1k_usd === minCost ? 'best-cost' : ''}">$${s.cost_per_1k_usd.toFixed(4)}</td>
+      </tr>`).join('');
+
+    const bA = summaries.find(s => s.accuracy        === maxAcc)?.provider;
+    const bL = summaries.find(s => s.p50_ms          === minP50)?.provider;
+    const bC = summaries.find(s => s.cost_per_1k_usd === minCost)?.provider;
+
+    document.getElementById('output-body').innerHTML = `
+      <div class="bench-wrap">
+        <div class="bench-title">Benchmark complete - ${summaries[0]?.n ?? 30} examples per provider</div>
+        <table class="bench-table">
+          <thead><tr>
+            <th>Provider</th><th>N</th><th>Accuracy</th><th>p50 lat</th><th>p95 lat</th><th>$/1K calls</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="win-row">
+          <span class="win-chip win-acc">🏆 Most accurate: ${bA ? pLabel(bA) : '-'}</span>
+          <span class="win-chip win-lat">⚡ Fastest p50: ${bL ? pLabel(bL) : '-'}</span>
+          <span class="win-chip win-cost">💰 Cheapest: ${bC ? pLabel(bC) : '-'}</span>
+        </div>
+      </div>`;
+  }
+
+  // ── Classify result card ──────────────────────────────────────────
+  function renderClassify(d) {
+    const intentClass = {
+      cancel_subscription: 'intent-cancel', request_refund: 'intent-refund',
+      payment_question: 'intent-payment',   unknown: 'intent-unknown',
+    }[d.label] || 'intent-unknown';
+    const chipClass = {
+      openai:     'chip-openai',
+      nano: 'chip-nano',
+      ollama:     'chip-ollama',
+    }[d.provider] || '';
+    const confPct   = (d.confidence * 100).toFixed(1);
+    const confColor = d.confidence >= 0.8 ? 'var(--green)'
+                    : d.confidence >= 0.5 ? 'var(--orange)' : 'var(--red)';
+    document.getElementById('output-body').innerHTML = `
+      <div class="result-card">
+        <div class="result-header">
+          <span class="intent-label ${intentClass}">${escHtml(d.label.replace(/_/g,' '))}</span>
+          <span class="provider-chip ${chipClass}">${pLabel(d.provider)}</span>
+        </div>
+        <div class="result-metrics">
+          <div class="metric">
+            <span class="m-label">Confidence</span>
+            <span class="m-value" style="color:${confColor}">${confPct}<span class="m-unit"> %</span></span>
+          </div>
+          <div class="metric">
+            <span class="m-label">Latency</span>
+            <span class="m-value">${d.latency_ms.toFixed(0)}<span class="m-unit"> ms</span></span>
+          </div>
+          <div class="metric">
+            <span class="m-label">In tokens</span>
+            <span class="m-value">${d.input_tokens}<span class="m-unit"> tok</span></span>
+          </div>
+          <div class="metric">
+            <span class="m-label">Out tokens</span>
+            <span class="m-value">${d.output_tokens}<span class="m-unit"> tok</span></span>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     CORE: Init - always runs on load, do not remove
+     ════════════════════════════════════════════════════════════════ */
+  checkHealth();
+</script>
+</body>
+</html>

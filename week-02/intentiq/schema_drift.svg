@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 680" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+  <defs>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/><feOffset dx="0" dy="3"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F8FAFC"/><stop offset="1" stop-color="#EEF2FF"/></linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect width="1100" height="680" fill="url(#bg)"/>
+  <text x="550" y="46" text-anchor="middle" font-size="26" font-weight="700" fill="#0F172A">Schema Drift - Same Prompt, Three Different Shapes</text>
+  <text x="550" y="72" text-anchor="middle" font-size="14" fill="#64748B">Every provider parses "give me JSON" a little differently. The abstraction layer hides this from your app.</text>
+
+  <g filter="url(#sh)">
+    <rect x="350" y="100" width="400" height="80" rx="14" fill="#1E293B"/>
+    <text x="550" y="130" text-anchor="middle" font-size="14" font-weight="700" fill="#FFFFFF">One prompt → three providers</text>
+    <text x="550" y="155" text-anchor="middle" font-size="11" font-family="monospace" fill="#A5F3FC">"Classify intent. Return JSON: {intent, confidence}"</text>
+  </g>
+  <line x1="450" y1="180" x2="240" y2="220" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="550" y1="180" x2="550" y2="220" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="650" y1="180" x2="860" y2="220" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <g filter="url(#sh)">
+    <rect x="60" y="230" width="320" height="240" rx="14" fill="#FFFFFF" stroke="#10B981" stroke-width="2"/>
+    <rect x="60" y="230" width="320" height="40" rx="14" fill="#10B981"/>
+    <rect x="60" y="252" width="320" height="18" fill="#10B981"/>
+    <text x="80" y="256" font-size="14" font-weight="700" fill="#FFFFFF">OpenAI · gpt-5.4-mini</text>
+    <text x="360" y="256" text-anchor="end" font-size="11" fill="#DCFCE7">JSON mode</text>
+    <rect x="80" y="290" width="280" height="160" rx="8" fill="#0F172A"/>
+    <text x="95" y="312" font-size="12" font-family="monospace" fill="#A5F3FC">{</text>
+    <text x="95" y="332" font-size="12" font-family="monospace" fill="#FDE68A">  "intent":</text>
+    <text x="95" y="350" font-size="12" font-family="monospace" fill="#86EFAC">    "cancel_subscription",</text>
+    <text x="95" y="372" font-size="12" font-family="monospace" fill="#FDE68A">  "confidence":</text>
+    <text x="95" y="390" font-size="12" font-family="monospace" fill="#FCA5A5">    0.90</text>
+    <text x="95" y="412" font-size="12" font-family="monospace" fill="#A5F3FC">}</text>
+    <text x="95" y="438" font-size="10" fill="#64748B">↑ clean. exactly the schema.</text>
+  </g>
+
+  <g filter="url(#sh)">
+    <rect x="390" y="230" width="320" height="240" rx="14" fill="#FFFFFF" stroke="#8B5CF6" stroke-width="2"/>
+    <rect x="390" y="230" width="320" height="40" rx="14" fill="#8B5CF6"/>
+    <rect x="390" y="252" width="320" height="18" fill="#8B5CF6"/>
+    <text x="410" y="256" font-size="14" font-weight="700" fill="#FFFFFF">OpenAI · gpt-5.4-nano</text>
+    <text x="690" y="256" text-anchor="end" font-size="11" fill="#EDE9FE">JSON mode</text>
+    <rect x="410" y="290" width="280" height="160" rx="8" fill="#0F172A"/>
+    <text x="425" y="312" font-size="12" font-family="monospace" fill="#A5F3FC">{</text>
+    <text x="425" y="330" font-size="12" font-family="monospace" fill="#FDE68A">  "intent":</text>
+    <text x="425" y="348" font-size="12" font-family="monospace" fill="#86EFAC">    "Cancel_Subscription",</text>
+    <text x="425" y="370" font-size="12" font-family="monospace" fill="#FDE68A">  "confidence":</text>
+    <text x="425" y="388" font-size="12" font-family="monospace" fill="#FCA5A5">    "0.9"</text>
+    <text x="425" y="408" font-size="12" font-family="monospace" fill="#A5F3FC">}</text>
+    <text x="425" y="438" font-size="10" fill="#64748B">↑ case + type drift - normalise it.</text>
+  </g>
+
+  <g filter="url(#sh)">
+    <rect x="720" y="230" width="320" height="240" rx="14" fill="#FFFFFF" stroke="#F59E0B" stroke-width="2"/>
+    <rect x="720" y="230" width="320" height="40" rx="14" fill="#F59E0B"/>
+    <rect x="720" y="252" width="320" height="18" fill="#F59E0B"/>
+    <text x="740" y="256" font-size="14" font-weight="700" fill="#FFFFFF">Ollama · qwen3:0.6b</text>
+    <text x="1020" y="256" text-anchor="end" font-size="11" fill="#FFFBEB">no JSON mode</text>
+    <rect x="740" y="290" width="280" height="160" rx="8" fill="#0F172A"/>
+    <text x="755" y="312" font-size="11" font-family="monospace" fill="#FDE68A">Sure! Here's the result:</text>
+    <text x="755" y="330" font-size="11" font-family="monospace" fill="#A5F3FC">```json</text>
+    <text x="755" y="346" font-size="11" font-family="monospace" fill="#A5F3FC">{</text>
+    <text x="755" y="362" font-size="11" font-family="monospace" fill="#86EFAC">  "intent":"cancel_subscription"</text>
+    <text x="755" y="378" font-size="11" font-family="monospace" fill="#A5F3FC">}</text>
+    <text x="755" y="394" font-size="11" font-family="monospace" fill="#A5F3FC">```</text>
+    <text x="755" y="412" font-size="11" font-family="monospace" fill="#FCA5A5">(I'm 90% sure)</text>
+    <text x="755" y="438" font-size="10" fill="#64748B">↑ prose + fenced JSON · no confidence</text>
+  </g>
+
+  <line x1="220" y1="470" x2="450" y2="530" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="550" y1="470" x2="550" y2="530" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="880" y1="470" x2="650" y2="530" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <g filter="url(#sh)">
+    <rect x="320" y="540" width="460" height="100" rx="14" fill="#FDF2F8" stroke="#EC4899" stroke-width="2"/>
+    <text x="550" y="572" text-anchor="middle" font-size="15" font-weight="700" fill="#500724">Provider Abstraction → unified Result object</text>
+    <text x="550" y="600" text-anchor="middle" font-size="12" font-family="monospace" fill="#0F172A">Result(label="cancel_subscription", confidence=0.90, raw=...)</text>
+    <text x="550" y="623" text-anchor="middle" font-size="11" fill="#475569" font-style="italic">Your app code never sees the differences. The adapter is where the mess lives.</text>
+  </g>
+  <text x="550" y="665" text-anchor="middle" font-size="10" fill="#CBD5E1">CoreSmart GenAI Developer Course · Week 02</text>
+</svg>
