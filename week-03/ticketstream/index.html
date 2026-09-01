@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<!--
+  CoreSmart GenAI - Developer Course UI
+  Week 3 - TicketStream (Streaming + Pydantic Enforcement)
+  ===========================================================
+  Based on: _templates/index.template.html
+
+  Intentional deviations (documented, not force-fit):
+    1. SSE uses Pattern B (structured events per field: intent, priority, customer_id,
+       routed, done) - NOT Pattern A (token deltas). doMain() drives the SSE stream.
+    2. Left panel has overflow-y: auto - provider selector + textarea + buttons
+       require scroll on small viewports.
+    3. Output renders a live ticket card rather than raw JSON; Format button shows
+       the raw event log.
+    4. checkHealth() redefined in WEEK-SPECIFIC to log both model names.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoreSmart GenAI - Developer Course Week 3 | TicketStream</title>
+  <style>
+    /* ══════════════════════════════════════════════════════════════
+       CORE - DO NOT EDIT (shared across all weeks)
+       ══════════════════════════════════════════════════════════════ */
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0d1117;
+      --surface:     #161b22;
+      --surface-2:   #21262d;
+      --surface-3:   #2d333b;
+      --border:      #30363d;
+      --text:        #e6edf3;
+      --text-muted:  #7d8590;
+      --blue:        #58a6ff;
+      --blue-dim:    #1f3a5f;
+      --green:       #3fb950;
+      --green-dim:   #1a3a28;
+      --red:         #f85149;
+      --red-dim:     #3d1a1a;
+      --orange:      #d29922;
+      --radius:      8px;
+      --mono:        'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; height: 52px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 15px; font-weight: 600; color: var(--text);
+    }
+    .header-title .logo {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #1a56db, #7e3af2);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+    }
+    .week-badge {
+      background: var(--blue-dim); color: var(--blue);
+      font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 20px;
+      border: 1px solid #1f4080;
+    }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+
+    button {
+      cursor: pointer; border: none; border-radius: var(--radius);
+      font-size: 13px; font-weight: 500;
+      transition: opacity 0.15s, transform 0.1s;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .btn-ghost {
+      background: transparent; color: var(--text-muted);
+      border: 1px solid var(--border); padding: 6px 12px;
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+
+    .btn-primary { background: #1a56db; color: #fff; padding: 8px 16px; }
+    .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+
+    .btn-secondary {
+      background: var(--surface-2); color: var(--text);
+      border: 1px solid var(--border); padding: 8px 16px;
+    }
+    .btn-secondary:hover:not(:disabled) { background: var(--surface-3); }
+
+    .btn-demo {
+      background: transparent; color: var(--blue);
+      border: 1px solid var(--blue-dim); padding: 5px 12px; font-size: 12px;
+    }
+    .btn-demo:hover:not(:disabled) { background: var(--blue-dim); }
+
+    #health-chip {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px;
+      font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text-muted);
+    }
+    #health-chip:hover { background: var(--surface-3); }
+    #health-chip.online  { color: var(--green); border-color: #1a4a2e; }
+    #health-chip.offline { color: var(--red);   border-color: #4a1a1a; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+    .online  .dot { background: var(--green); box-shadow: 0 0 6px #3fb95088; animation: pulse 2s infinite; }
+    .offline .dot { background: var(--red); }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    main {
+      display: grid; grid-template-columns: 380px 1fr;
+      flex: 1; overflow: hidden;
+    }
+
+    .left-panel {
+      display: flex; flex-direction: column;
+      border-right: 1px solid var(--border); overflow: hidden;
+    }
+
+    .panel-section { padding: 16px; border-bottom: 1px solid var(--border); }
+    .panel-section:last-child { border-bottom: none; }
+
+    label {
+      display: block; font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); margin-bottom: 8px;
+    }
+
+    textarea, input[type="email"], input[type="text"], select {
+      width: 100%; background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text); font-size: 13px; font-family: inherit;
+      outline: none; transition: border-color 0.15s;
+    }
+    textarea { resize: none; }
+    textarea:focus, input:focus, select:focus {
+      border-color: var(--blue); box-shadow: 0 0 0 3px #1a56db22;
+    }
+
+    #notes {
+      flex: 1; min-height: 0; height: 0;
+      padding: 10px 12px; line-height: 1.6;
+    }
+
+    input[type="email"], input[type="text"] { padding: 8px 12px; height: 38px; }
+    select { padding: 8px 12px; height: 38px; cursor: pointer; }
+    select option { background: var(--surface-2); }
+
+    .input-row {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 8px;
+    }
+
+    .action-btns { display: flex; flex-direction: column; gap: 8px; padding: 16px; }
+    .action-btns button { width: 100%; justify-content: center; }
+
+    .right-panel { display: flex; flex-direction: column; overflow: hidden; }
+
+    .pane { display: flex; flex-direction: column; overflow: hidden; }
+    .pane-output { flex: 1; border-bottom: 1px solid var(--border); }
+    .pane-logs   { height: 200px; flex-shrink: 0; }
+
+    .pane-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); flex-shrink: 0;
+    }
+
+    .pane-body {
+      flex: 1; overflow-y: auto; padding: 16px;
+      font-family: var(--mono); font-size: 13px; line-height: 1.6;
+    }
+    .pane-body::-webkit-scrollbar { width: 6px; }
+    .pane-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .placeholder-msg { color: var(--text-muted); font-family: inherit; font-size: 13px; font-style: italic; }
+
+    .j-k    { color: #79c0ff; }
+    .j-s    { color: #a5d6ff; }
+    .j-n    { color: #ffa657; }
+    .j-b    { color: #7ee787; }
+    .j-null { color: var(--text-muted); }
+
+    #output-body.streaming::after {
+      content: '▋'; animation: blink 0.8s step-end infinite; color: var(--blue);
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .log-entry { display: flex; gap: 10px; padding: 2px 0; font-size: 12px; line-height: 1.5; }
+    .log-ts    { color: var(--text-muted); flex-shrink: 0; }
+    .log-level { font-weight: 700; flex-shrink: 0; width: 50px; }
+    .log-msg   { color: var(--text); word-break: break-word; }
+    .log-info    .log-level { color: var(--blue); }
+    .log-success .log-level { color: var(--green); }
+    .log-warn    .log-level { color: var(--orange); }
+    .log-error   .log-level { color: var(--red); }
+
+    .spinner {
+      display: none; width: 14px; height: 14px;
+      border: 2px solid var(--border); border-top-color: var(--blue);
+      border-radius: 50%; animation: spin 0.6s linear infinite; flex-shrink: 0;
+    }
+    .spinner.active { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: var(--red-dim); border: 1px solid #6b2020;
+      border-radius: var(--radius); padding: 12px;
+      color: var(--red); font-family: var(--mono); font-size: 12px; white-space: pre-wrap;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       WEEK-SPECIFIC START
+       Deviation: left-panel needs scroll for multiple sections
+       ══════════════════════════════════════════════════════════════ */
+
+    .left-panel { overflow-y: auto; }
+
+    /* Provider selector */
+    .provider-group { display: flex; flex-direction: column; gap: 6px; }
+    .provider-opt input[type="radio"] { display: none; }
+    .provider-card {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 12px; background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      cursor: pointer; transition: all 0.15s; user-select: none;
+    }
+    .provider-card:hover { background: var(--surface-3); }
+    .provider-opt input:checked + .provider-card { border-color: var(--blue); background: var(--blue-dim); }
+    .p-left    { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .p-dot     { width: 6px; height: 6px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+    .provider-opt input:checked + .provider-card .p-dot { background: var(--blue); }
+    .p-name    { font-size: 13px; font-weight: 700; color: var(--text); font-family: var(--mono); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .p-provider { font-size: 11px; color: var(--text-muted); flex-shrink: 0; padding-left: 8px; }
+
+    /* Ticket card - fields appear one by one as SSE events arrive */
+    .ticket-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; margin-bottom: 12px;
+    }
+    .ticket-field {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 10px 14px; border-bottom: 1px solid var(--border);
+      animation: fadeIn 0.25s ease;
+    }
+    .ticket-field:last-child { border-bottom: none; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+    .field-key {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--text-muted);
+      width: 90px; flex-shrink: 0; padding-top: 2px;
+    }
+    .field-val { font-family: var(--mono); font-size: 13px; color: var(--text); word-break: break-all; }
+
+    /* Priority colour badges */
+    .badge {
+      display: inline-block; font-size: 11px; font-weight: 700;
+      padding: 2px 8px; border-radius: 20px; text-transform: uppercase;
+    }
+    .badge-critical { background: var(--red-dim);   color: var(--red);    border: 1px solid #6b2020; }
+    .badge-high     { background: #3d2a00;           color: var(--orange); border: 1px solid #5a3a00; }
+    .badge-medium   { background: var(--blue-dim);   color: var(--blue);   border: 1px solid #1f4080; }
+    .badge-low      { background: var(--surface-3);  color: var(--text-muted); border: 1px solid var(--border); }
+
+    .routed-banner {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--green-dim); border: 1px solid #1a4a2e;
+      border-radius: var(--radius); padding: 10px 14px;
+      font-size: 13px; color: var(--green); margin-bottom: 8px;
+      animation: fadeIn 0.25s ease;
+    }
+    .done-meta {
+      font-size: 11px; color: var(--text-muted); display: flex; gap: 14px; flex-wrap: wrap;
+    }
+    .done-meta b { color: var(--text); font-family: var(--mono); }
+
+    /* ══════════════════════════════════════════════════════════════
+       WEEK-SPECIFIC END
+       ══════════════════════════════════════════════════════════════ */
+  </style>
+</head>
+<body>
+
+<!-- ── CORE: Header ──────────────────────────────────────────────── -->
+<header>
+  <div class="header-title">
+    <div class="logo">🤖</div>
+    CoreSmart GenAI - Developer Course
+    <span class="week-badge">Week 3</span>
+    <span class="header-sub">- TicketStream</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn-ghost" onclick="window.open('http://localhost:8000/readme','_blank')">📖 README</button>
+    <div id="health-chip" onclick="checkHealth()" title="Click to re-check">
+      <span class="dot"></span>
+      <span id="health-text">Checking…</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main layout ─────────────────────────────────────────────── -->
+<main>
+
+  <!-- Left panel -->
+  <div class="left-panel">
+
+    <!-- CORE: Primary input -->
+    <div class="panel-section" style="flex:1; display:flex; flex-direction:column;">
+      <div class="input-row">
+        <label style="margin:0">Support Message</label>
+        <button class="btn-demo" onclick="fillDemo()">↺ Fill Demo</button>
+      </div>
+      <textarea id="notes" placeholder="Describe your issue - order status, refund, or billing question…"></textarea>
+    </div>
+
+    <!-- WEEK-SPECIFIC: Provider selector -->
+    <div class="panel-section">
+      <label>Model</label>
+      <div class="provider-group">
+
+        <label class="provider-opt" style="margin:0">
+          <input type="radio" name="provider" value="openai" checked>
+          <div class="provider-card">
+            <div class="p-left"><div class="p-dot"></div><span class="p-name">gpt-5.4-mini-2026-03-17</span></div>
+            <span class="p-provider">openai</span>
+          </div>
+        </label>
+
+        <label class="provider-opt" style="margin:0">
+          <input type="radio" name="provider" value="nano">
+          <div class="provider-card">
+            <div class="p-left"><div class="p-dot"></div><span class="p-name">gpt-5.4-nano-2026-03-17</span></div>
+            <span class="p-provider">openai · fast</span>
+          </div>
+        </label>
+
+      </div>
+    </div>
+
+    <!-- CORE: Action buttons -->
+    <div class="action-btns">
+      <button class="btn-primary" id="btn-main" onclick="doMain()">
+        <span id="spin-m" class="spinner"></span>
+        📨 &nbsp;Submit Ticket
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Right panel (CORE - do not change structure) -->
+  <div class="right-panel">
+
+    <div class="pane pane-output">
+      <div class="pane-header">
+        Output
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="output-tag" style="font-size:11px;color:var(--text-muted)"></span>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px;display:none" id="btn-format" onclick="toggleFormat()">{ } Format</button>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearOutput()">✕ Clear</button>
+        </div>
+      </div>
+      <div class="pane-body" id="output-body">
+        <span class="placeholder-msg">Response will appear here…</span>
+      </div>
+    </div>
+
+    <div class="pane pane-logs">
+      <div class="pane-header">
+        Logs
+        <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearLogs()">✕ Clear</button>
+      </div>
+      <div class="pane-body" id="logs-body">
+        <span class="placeholder-msg">Request logs will appear here…</span>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  /* ══════════════════════════════════════════════════════════════════
+     CORE - DO NOT EDIT (shared across all weeks)
+     ════════════════════════════════════════════════════════════════ */
+
+  const API = 'http://localhost:8000';
+
+  let _rawOutputText = '';
+  let _isFormatted   = false;
+
+  function _fmtDetail(detail, fallback) {
+    if (!detail) return fallback || 'Unknown error';
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail))
+      return detail.map(d => d.msg || JSON.stringify(d)).join(' | ');
+    return JSON.stringify(detail);
+  }
+
+  function _showFormatBtn(show) {
+    document.getElementById('btn-format').style.display = show ? '' : 'none';
+    _isFormatted = false;
+    document.getElementById('btn-format').textContent = '{ } Format';
+  }
+
+  function toggleFormat() {
+    const body = document.getElementById('output-body');
+    const btn  = document.getElementById('btn-format');
+    if (!_isFormatted) {
+      let src = _rawOutputText.trim();
+      if (src.startsWith('```')) {
+        const inner = src.split('```')[1] || '';
+        src = inner.startsWith('json') ? inner.slice(4).trim() : inner.trim();
+      }
+      try {
+        body.innerHTML = `<pre>${highlightJSON(JSON.parse(src))}</pre>`;
+        _isFormatted = true; btn.textContent = '≡ Raw';
+        addLog('info', 'Output formatted as JSON.');
+      } catch { addLog('warn', 'Could not parse output as JSON.'); }
+    } else {
+      body.textContent = _rawOutputText;
+      _isFormatted = false; btn.textContent = '{ } Format';
+    }
+  }
+
+  function clearOutput() {
+    document.getElementById('output-body').innerHTML =
+      '<span class="placeholder-msg">Response will appear here…</span>';
+    document.getElementById('output-tag').textContent = '';
+    _rawOutputText = ''; _showFormatBtn(false);
+  }
+
+  function clearLogs() {
+    document.getElementById('logs-body').innerHTML =
+      '<span class="placeholder-msg">Request logs will appear here…</span>';
+  }
+
+  function addLog(level, msg) {
+    const body = document.getElementById('logs-body');
+    const ph   = body.querySelector('.placeholder-msg');
+    if (ph) ph.remove();
+    const now = new Date().toLocaleTimeString('en-GB', {hour12: false});
+    const div = document.createElement('div');
+    div.className = `log-entry log-${level}`;
+    div.innerHTML =
+      `<span class="log-ts">${now}</span>` +
+      `<span class="log-level">${level.toUpperCase()}</span>` +
+      `<span class="log-msg">${escHtml(msg)}</span>`;
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function highlightJSON(obj) {
+    const str = JSON.stringify(obj, null, 2);
+    return escHtml(str).replace(
+      /(&quot;(?:\\u[0-9a-fA-F]{4}|\\[^u]|[^\\&])*&quot;(?:\s*:)?|\b(?:true|false)\b|\bnull\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      match => {
+        let c = 'n';
+        if (match.startsWith('&quot;'))
+          c = match.endsWith(':') ? 'k' : 's';
+        else if (match === 'true' || match === 'false') c = 'b';
+        else if (match === 'null') c = 'null';
+        return `<span class="j-${c}">${match}</span>`;
+      }
+    );
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function setLoading(active) {
+    document.querySelectorAll('.action-btns button').forEach(b => b.disabled = active);
+    document.querySelectorAll('.spinner').forEach(s => s.classList.toggle('active', active));
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     WEEK-SPECIFIC START
+     Deviation: SSE uses Pattern B (structured events), not token deltas.
+     doMain() drives the full SSE lifecycle.
+     ════════════════════════════════════════════════════════════════ */
+
+  const DEMO_NOTES = 'Hi, order ORD-1042 was supposed to arrive Monday. Still no update. Customer ID 8821.';
+
+  const PROVIDER_MODEL = {
+    openai: 'gpt-5.4-mini-2026-03-17',
+    nano:   'gpt-5.4-nano-2026-03-17',
+  };
+  const pLabel = p => escHtml(PROVIDER_MODEL[p] || p);
+
+  function getProvider() {
+    return document.querySelector('input[name="provider"]:checked').value;
+  }
+
+  function fillDemo() {
+    document.getElementById('notes').value = DEMO_NOTES;
+    addLog('info', 'Demo input loaded.');
+  }
+
+  // checkHealth redefined to log both model names
+  async function checkHealth() {
+    const chip = document.getElementById('health-chip');
+    const txt  = document.getElementById('health-text');
+    chip.className = ''; txt.textContent = 'Checking…';
+    try {
+      const r    = await fetch(`${API}/health`);
+      const data = await r.json();
+      chip.className  = 'online';
+      txt.textContent = `Online · ${data.model}`;
+      addLog('success', `Health OK - openai: ${escHtml(data.models.openai)} | nano: ${escHtml(data.models.nano)}`);
+    } catch (e) {
+      chip.className  = 'offline';
+      txt.textContent = 'Offline';
+      addLog('error', `Health check failed - is the server running? (${e.message})`);
+    }
+  }
+
+  // Badge helper for priority field
+  function priorityBadge(p) {
+    const cls = `badge badge-${(p||'low').toLowerCase()}`;
+    return `<span class="${cls}">${escHtml(p || 'unknown')}</span>`;
+  }
+
+  // Render a single ticket field row into the card container
+  function addField(container, key, valHtml) {
+    const row = document.createElement('div');
+    row.className = 'ticket-field';
+    row.innerHTML = `<span class="field-key">${escHtml(key)}</span><span class="field-val">${valHtml}</span>`;
+    container.appendChild(row);
+  }
+
+  // SSE Pattern B - structured events: intent / priority / customer_id / routed / done / validation_failed
+  async function doMain() {
+    const input    = document.getElementById('notes').value.trim();
+    const provider = getProvider();
+    if (!input) { addLog('warn', 'Input is empty.'); return; }
+
+    clearOutput(); setLoading(true);
+    document.getElementById('output-tag').textContent = '/intake-stream';
+    addLog('info', `POST /intake-stream (SSE) - model: ${pLabel(provider)}`);
+
+    const body = document.getElementById('output-body');
+    body.innerHTML = '';
+    body.classList.add('streaming');
+
+    // Build the ticket card scaffold upfront
+    const card = document.createElement('div');
+    card.className = 'ticket-card';
+    card.id = 'ticket-card';
+    body.appendChild(card);
+
+    const eventLog = [];
+
+    try {
+      const r = await fetch(`${API}/intake-stream`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ message: input, provider }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({detail: r.statusText}));
+        throw new Error(_fmtDetail(d.detail, r.statusText));
+      }
+
+      const reader = r.body.getReader(), decoder = new TextDecoder();
+      let buf = '', eventName = '';
+
+      while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, {stream: true});
+        const lines = buf.split('\n'); buf = lines.pop() ?? '';
+        for (const line of lines) {
+          if (line.startsWith('event: ')) { eventName = line.slice(7).trim(); continue; }
+          if (!line.startsWith('data: '))  continue;
+          const payload = line.slice(6).trim();
+          try {
+            const ev = JSON.parse(payload);
+            eventLog.push({event: eventName, data: ev});
+            handleTicketEvent(eventName, ev, card, body);
+          } catch {}
+          eventName = '';
+        }
+      }
+    } catch(e) {
+      body.innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally {
+      body.classList.remove('streaming');
+      setLoading(false);
+      _rawOutputText = JSON.stringify(eventLog, null, 2);
+      _showFormatBtn(true);
+    }
+  }
+
+  function handleTicketEvent(event, data, card, body) {
+    switch (event) {
+
+      case 'intent': {
+        const t = data.type || '?';
+        let detail = '';
+        if (data.order_id)   detail = ` &nbsp;<b>${escHtml(data.order_id)}</b>`;
+        if (data.invoice_id) detail = ` &nbsp;<b>${escHtml(data.invoice_id)}</b>`;
+        if (data.reason)     detail += ` - ${escHtml(data.reason)}`;
+        addField(card, 'Intent', `<span class="badge badge-medium">${escHtml(t)}</span>${detail}`);
+        addLog('info', `event:intent - type: ${t}`);
+        break;
+      }
+
+      case 'priority': {
+        addField(card, 'Priority', priorityBadge(data.value));
+        addLog('info', `event:priority - ${data.value}`);
+        break;
+      }
+
+      case 'customer_id': {
+        const val = data.value != null ? `<b>#${escHtml(String(data.value))}</b>` : '<span style="color:var(--text-muted)">none</span>';
+        addField(card, 'Customer', val);
+        addLog('info', `event:customer_id - ${data.value ?? 'null'}`);
+        break;
+      }
+
+      case 'routed': {
+        const banner = document.createElement('div');
+        banner.className = 'routed-banner';
+        banner.innerHTML = `✅ &nbsp;Routed to <b style="margin:0 4px">${escHtml(data.team)}</b> team &nbsp;·&nbsp; <a href="${escHtml(data.ticket_url)}" style="color:var(--blue);font-family:var(--mono);font-size:12px">${escHtml(data.ticket_url)}</a>`;
+        body.appendChild(banner);
+        addLog('success', `event:routed - team: ${data.team}, priority: ${data.priority}`);
+        break;
+      }
+
+      case 'done': {
+        if (data.ok) {
+          const meta = document.createElement('div');
+          meta.className = 'done-meta';
+          meta.innerHTML =
+            `<span>Corrections: <b>${data.correction_count ?? 0}</b></span>` +
+            `<span>Attempts: <b>${data.attempts ?? 1}</b></span>` +
+            `<span>Model: <b>${escHtml(data.model || '')}</b></span>`;
+          body.appendChild(meta);
+          addLog('success', `Stream complete - corrections: ${data.correction_count ?? 0}, model: ${data.model || ''}`);
+        }
+        break;
+      }
+
+      case 'validation_failed': {
+        const errBox = document.createElement('div');
+        errBox.className = 'error-box';
+        errBox.textContent = data.error || 'Validation failed';
+        if (data.stage) errBox.textContent += ` (stage: ${data.stage})`;
+        body.replaceChild(errBox, card);
+        addLog('error', `event:validation_failed - ${data.error}`);
+        break;
+      }
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     CORE: Init - always runs on load, do not remove
+     ════════════════════════════════════════════════════════════════ */
+  checkHealth();
+</script>
+</body>
+</html>

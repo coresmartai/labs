@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 700" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+      <feOffset dx="0" dy="3" result="off"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#FEF3C7"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#475569"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+    </marker>
+    <marker id="arrow-rose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#F43F5E"/>
+    </marker>
+    <marker id="arrow-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#F59E0B"/>
+    </marker>
+  </defs>
+
+  <rect width="1100" height="700" fill="url(#bg)"/>
+  <text x="550" y="46" text-anchor="middle" font-size="26" font-weight="700" fill="#0F172A">Retry State Machine - Bounded Exponential Backoff</text>
+  <text x="550" y="72" text-anchor="middle" font-size="14" fill="#64748B">Six states, two exits. Hard caps everywhere. Retry budgets live in code, not in someone's head.</text>
+
+  <!-- States -->
+  <!-- idle -->
+  <g filter="url(#shadow)">
+    <circle cx="180" cy="280" r="65" fill="#FFFFFF" stroke="#475569" stroke-width="2.5"/>
+    <text x="180" y="278" text-anchor="middle" font-size="16" font-weight="700" fill="#0F172A">idle</text>
+    <text x="180" y="298" text-anchor="middle" font-size="11" fill="#64748B">waiting</text>
+  </g>
+
+  <!-- call -->
+  <g filter="url(#shadow)">
+    <circle cx="430" cy="280" r="70" fill="#EEF2FF" stroke="#4F46E5" stroke-width="2.5"/>
+    <text x="430" y="275" text-anchor="middle" font-size="16" font-weight="700" fill="#1E1B4B">call</text>
+    <text x="430" y="295" text-anchor="middle" font-size="11" fill="#64748B">execute attempt</text>
+    <text x="430" y="312" text-anchor="middle" font-size="10" fill="#64748B">attempt = N</text>
+  </g>
+
+  <!-- success -->
+  <g filter="url(#shadow)">
+    <circle cx="680" cy="160" r="65" fill="#ECFDF5" stroke="#10B981" stroke-width="2.5"/>
+    <text x="680" y="158" text-anchor="middle" font-size="16" font-weight="700" fill="#064E3B">success</text>
+    <text x="680" y="178" text-anchor="middle" font-size="11" fill="#10B981">return result</text>
+  </g>
+
+  <!-- fail (decision) -->
+  <g filter="url(#shadow)">
+    <circle cx="680" cy="400" r="65" fill="#FEE2E2" stroke="#F43F5E" stroke-width="2.5"/>
+    <text x="680" y="398" text-anchor="middle" font-size="16" font-weight="700" fill="#9F1239">fail</text>
+    <text x="680" y="418" text-anchor="middle" font-size="11" fill="#9F1239">attempt &lt; max?</text>
+  </g>
+
+  <!-- backoff -->
+  <g filter="url(#shadow)">
+    <circle cx="430" cy="520" r="70" fill="#FFFBEB" stroke="#F59E0B" stroke-width="2.5"/>
+    <text x="430" y="515" text-anchor="middle" font-size="16" font-weight="700" fill="#451A03">backoff</text>
+    <text x="430" y="535" text-anchor="middle" font-size="11" fill="#451A03">sleep + jitter</text>
+    <text x="430" y="552" text-anchor="middle" font-size="10" fill="#64748B">delay = base × 2^N</text>
+  </g>
+
+  <!-- give_up -->
+  <g filter="url(#shadow)">
+    <circle cx="950" cy="400" r="70" fill="#1E1B4B" stroke="#9F1239" stroke-width="3"/>
+    <text x="950" y="398" text-anchor="middle" font-size="16" font-weight="700" fill="#FFFFFF">give_up</text>
+    <text x="950" y="418" text-anchor="middle" font-size="11" fill="#FCA5A5">raise to caller</text>
+    <text x="950" y="434" text-anchor="middle" font-size="10" fill="#FCA5A5">+ log event</text>
+  </g>
+
+  <!-- Transitions -->
+  <!-- idle → call -->
+  <path d="M245 280 L360 280" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <text x="302" y="270" text-anchor="middle" font-size="11" font-weight="700" fill="#334155">user message</text>
+
+  <!-- call → success -->
+  <path d="M475 230 Q530 175 615 165" fill="none" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+  <text x="572" y="180" font-size="11" font-weight="700" fill="#10B981">200 OK</text>
+
+  <!-- call → fail -->
+  <path d="M475 330 Q530 380 615 395" fill="none" stroke="#F43F5E" stroke-width="2.5" marker-end="url(#arrow-rose)"/>
+  <text x="510" y="370" font-size="11" font-weight="700" fill="#F43F5E">503 / Timeout</text>
+
+  <!-- fail → backoff (attempt < max) -->
+  <path d="M635 445 Q540 510 500 510" fill="none" stroke="#F59E0B" stroke-width="2.5" marker-end="url(#arrow-amber)"/>
+  <text x="555" y="495" font-size="11" font-weight="700" fill="#F59E0B">attempt &lt; max</text>
+
+  <!-- fail → give_up -->
+  <path d="M745 400 L880 400" stroke="#9F1239" stroke-width="2.5" marker-end="url(#arrow-rose)"/>
+  <text x="812" y="390" text-anchor="middle" font-size="11" font-weight="700" fill="#9F1239">attempt = max</text>
+
+  <!-- backoff → call -->
+  <path d="M430 450 L430 350" stroke="#F59E0B" stroke-width="2.5" marker-end="url(#arrow-amber)"/>
+  <text x="445" y="400" font-size="11" font-weight="700" fill="#F59E0B">timer expired</text>
+  <text x="445" y="416" font-size="10" fill="#64748B">attempt++</text>
+
+  <!-- success → idle -->
+  <path d="M615 138 Q400 80 215 230" fill="none" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrow-green)" stroke-dasharray="6 4"/>
+  <text x="380" y="100" font-size="11" font-weight="700" fill="#10B981">return; reset state</text>
+
+  <!-- Legend / annotations -->
+  <g>
+    <rect x="80" y="600" width="940" height="70" rx="10" fill="#0F172A"/>
+    <text x="100" y="626" font-size="13" font-weight="700" fill="#10B981">★ Two layers of retry</text>
+    <text x="100" y="646" font-size="11" fill="#CBD5E1">• Tool-level (this diagram) - `tenacity`, 3 attempts, base 500ms, max 8s</text>
+    <text x="100" y="661" font-size="11" fill="#CBD5E1">• Model-level - `pydantic.ValidationError` → corrective prompt → re-call (cap 2)</text>
+
+    <text x="560" y="626" font-size="13" font-weight="700" fill="#F59E0B">⚠ Failure-mode tags</text>
+    <text x="560" y="646" font-size="11" fill="#CBD5E1">• tool_impl_transient_failed</text>
+    <text x="560" y="661" font-size="11" fill="#CBD5E1">• tool_arg_validation_failed</text>
+    <text x="780" y="646" font-size="11" fill="#CBD5E1">• unexpected_text_response</text>
+    <text x="780" y="661" font-size="11" fill="#CBD5E1">• loop_exceeded (iteration cap)</text>
+  </g>
+
+  <text x="550" y="694" text-anchor="middle" font-size="11" fill="#94A3B8">CoreSmart GenAI Developer Course · Week 3</text>
+</svg>
