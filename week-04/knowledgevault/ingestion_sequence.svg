@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 780" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0%" stop-color="#F8FAFC"/>
+  <stop offset="100%" stop-color="#ECFDF5"/>
+</linearGradient>
+<filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+  <feOffset dx="0" dy="3" result="off"/>
+  <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+  <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+  <path d="M0,0 L10,5 L0,10 Z" fill="#475569"/>
+</marker>
+<marker id="arrow-cyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+  <path d="M0,0 L10,5 L0,10 Z" fill="#06B6D4"/>
+</marker>
+<marker id="arrow-indigo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+  <path d="M0,0 L10,5 L0,10 Z" fill="#4F46E5"/>
+</marker>
+<marker id="arrow-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+  <path d="M0,0 L10,5 L0,10 Z" fill="#F59E0B"/>
+</marker>
+<marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+  <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+</marker>
+</defs>
+<rect width="1100" height="780" fill="url(#bg)"/>
+
+<!-- Title -->
+<text x="550" y="44" text-anchor="middle" font-size="26" font-weight="700" fill="#0F172A">Ingestion Sequence - Five Stages</text>
+<text x="550" y="68" text-anchor="middle" font-size="14" fill="#64748B">parse → describe → chunk → embed (text-only) → index · two conceptual failure points annotated</text>
+
+<!-- Lane headers + lifelines -->
+<rect x="50" y="100" width="160" height="44" rx="10" fill="#0F172A" filter="url(#shadow)"/>
+<text x="130" y="128" text-anchor="middle" font-size="14" fill="#F8FAFC" font-weight="700">CLI · ingest.py</text>
+<line x1="130" y1="144" x2="130" y2="670" stroke="#94A3B8" stroke-width="1" stroke-dasharray="3 3"/>
+
+<rect x="260" y="100" width="160" height="44" rx="10" fill="#06B6D4" filter="url(#shadow)"/>
+<text x="340" y="128" text-anchor="middle" font-size="14" fill="#F8FAFC" font-weight="700">Parser</text>
+<line x1="340" y1="144" x2="340" y2="670" stroke="#94A3B8" stroke-width="1" stroke-dasharray="3 3"/>
+
+<rect x="470" y="100" width="160" height="44" rx="10" fill="#F59E0B" filter="url(#shadow)"/>
+<text x="550" y="128" text-anchor="middle" font-size="14" fill="#F8FAFC" font-weight="700">Vision LLM</text>
+<line x1="550" y1="144" x2="550" y2="670" stroke="#94A3B8" stroke-width="1" stroke-dasharray="3 3"/>
+
+<rect x="680" y="100" width="160" height="44" rx="10" fill="#4F46E5" filter="url(#shadow)"/>
+<text x="760" y="128" text-anchor="middle" font-size="14" fill="#F8FAFC" font-weight="700">Chunker + Embedder</text>
+<line x1="760" y1="144" x2="760" y2="670" stroke="#94A3B8" stroke-width="1" stroke-dasharray="3 3"/>
+
+<rect x="890" y="100" width="160" height="44" rx="10" fill="#10B981" filter="url(#shadow)"/>
+<text x="970" y="128" text-anchor="middle" font-size="14" fill="#F8FAFC" font-weight="700">Qdrant</text>
+<line x1="970" y1="144" x2="970" y2="670" stroke="#94A3B8" stroke-width="1" stroke-dasharray="3 3"/>
+
+<!-- Message 1: CLI → Parser (parse_pdf) -->
+<rect x="135" y="170" width="200" height="20" rx="4" fill="#FFFFFF" stroke="#475569" stroke-width="1"/>
+<text x="235" y="184" text-anchor="middle" font-size="11" fill="#0F172A" font-weight="600">parse_pdf(attention-paper.pdf)</text>
+<line x1="130" y1="200" x2="340" y2="200" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+<!-- Message 2: CLI/ingest.py → Vision LLM (describe_figure) - orchestrator makes this call -->
+<rect x="240" y="225" width="200" height="20" rx="4" fill="#FFFFFF" stroke="#475569" stroke-width="1"/>
+<text x="340" y="239" text-anchor="middle" font-size="11" fill="#0F172A" font-weight="600">describe_figure(png)</text>
+<line x1="130" y1="255" x2="550" y2="255" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+<text x="340" y="272" text-anchor="middle" font-size="10" fill="#475569" font-style="italic">for each figure</text>
+
+<!-- Failure #1 box (gap above + below for breathing room) -->
+<rect x="450" y="290" width="240" height="36" rx="8" fill="#FEE2E2" stroke="#F43F5E" stroke-width="2"/>
+<text x="570" y="313" text-anchor="middle" font-size="11" fill="#9F1239" font-weight="700">⚠ Failure #1: prose returned, JSON parse fails</text>
+
+<!-- Message 3: Vision LLM → CLI/ingest.py (return type/summary) - moved down for gap from Failure #1 -->
+<rect x="230" y="355" width="220" height="20" rx="4" fill="#FFFFFF" stroke="#F59E0B" stroke-width="1"/>
+<text x="340" y="369" text-anchor="middle" font-size="11" fill="#0F172A" font-weight="600">← {type, summary, confidence}</text>
+<line x1="550" y1="385" x2="130" y2="385" stroke="#F59E0B" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+<!-- Message 4: CLI/ingest.py → Chunker+Embedder (chunk + metadata) - orchestrator makes this call -->
+<rect x="345" y="410" width="200" height="20" rx="4" fill="#FFFFFF" stroke="#475569" stroke-width="1"/>
+<text x="445" y="424" text-anchor="middle" font-size="11" fill="#0F172A" font-weight="600">chunk + metadata</text>
+<line x1="130" y1="440" x2="760" y2="440" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+<!-- Message 5: Chunker+Embedder self-call (embed_text) -->
+<rect x="660" y="465" width="220" height="20" rx="4" fill="#FFFFFF" stroke="#475569" stroke-width="1"/>
+<text x="770" y="479" text-anchor="middle" font-size="11" fill="#0F172A" font-weight="600">embed_text (text-embedding-3-large)</text>
+<path d="M 760 495 C 820 495 820 510 760 510" stroke="#475569" stroke-width="2.5" fill="none" marker-end="url(#arrow)"/>
+
+<!-- Message 6: Chunker+Embedder → Qdrant (upsert) -->
+<rect x="765" y="530" width="200" height="20" rx="4" fill="#FFFFFF" stroke="#475569" stroke-width="1"/>
+<text x="865" y="544" text-anchor="middle" font-size="11" fill="#0F172A" font-weight="600">upsert(point, vector=[3072-dim])</text>
+<line x1="760" y1="560" x2="970" y2="560" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+<!-- Failure #2 box (gap above and below) -->
+<rect x="850" y="585" width="240" height="36" rx="8" fill="#FEE2E2" stroke="#F43F5E" stroke-width="2"/>
+<text x="970" y="608" text-anchor="middle" font-size="11" fill="#9F1239" font-weight="700">⚠ Failure #2: vector size mismatch</text>
+
+<!-- Message 7: Qdrant → CLI (return upsert ok/error) - gapped below Failure #2 -->
+<rect x="450" y="635" width="200" height="20" rx="4" fill="#FFFFFF" stroke="#10B981" stroke-width="1"/>
+<text x="550" y="649" text-anchor="middle" font-size="11" fill="#0F172A" font-weight="600">← upsert ok / error</text>
+<line x1="970" y1="668" x2="130" y2="668" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+
+<!-- Caption -->
+<text x="550" y="710" text-anchor="middle" font-size="13" fill="#0F172A" font-weight="600">Failure #1: restore tool_choice in llm.py · Failure #2: re-run with --reset to recreate collection</text>
+
+<!-- Footer credit -->
+<text x="550" y="755" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="11" fill="#94A3B8">Applied GenAI &amp; Agentic AI Engineering Course · Week 04</text>
+</svg>

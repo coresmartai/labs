@@ -1,0 +1,19 @@
+# Your golden set. Ten queries minimum, at least four of them figure or table
+# queries. One JSON object per line; lines starting with # are ignored.
+#
+# Fields:
+#   id                    m01, m02, ... (keep them unique)
+#   modality              "prose" | "figure" | "table"   (how the summary groups them)
+#   query                 what a reader would actually type, not a copy of the sentence you want back
+#   expected_document_id  one of: attention-is-all-you-need | bert | rag | vit | lora
+#   expected_chunk_type   optional. "figure-description" or "table-row". Omit for prose.
+#   must_contain          list of terms; a chunk counts if ANY of them appears (case-insensitive).
+#                         Use it to reject a chunk that is from the right paper but the wrong passage.
+#                         Give figure queries several spellings; the describer chooses its own words.
+#
+# A query nobody would ask, written so that one chunk matches it, is not a
+# golden query. Write the question first, then go and find out what the right
+# answer chunk looks like, then write must_contain from that.
+#
+# Delete this example line before you run --set mine.
+{"id": "m00", "modality": "prose", "query": "What learning rate schedule did the Transformer authors use, and what is warmup_steps?", "expected_document_id": "attention-is-all-you-need", "must_contain": ["warmup_steps", "warmup", "learning rate"]}

@@ -1,0 +1,45 @@
+{
+  "_comment": "The PaperFinder corpus. Download each PDF from `url` and save it in data/sample/ as exactly `filename`. The filename stem becomes the document_id that the golden queries expect. PDFs are not committed (see .gitignore).",
+  "papers": [
+    {
+      "document_id": "attention-is-all-you-need",
+      "filename": "attention-is-all-you-need.pdf",
+      "title": "Attention Is All You Need",
+      "arxiv": "1706.03762",
+      "url": "https://arxiv.org/pdf/1706.03762",
+      "year": 2017
+    },
+    {
+      "document_id": "bert",
+      "filename": "bert.pdf",
+      "title": "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding",
+      "arxiv": "1810.04805",
+      "url": "https://arxiv.org/pdf/1810.04805",
+      "year": 2018
+    },
+    {
+      "document_id": "rag",
+      "filename": "rag.pdf",
+      "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+      "arxiv": "2005.11401",
+      "url": "https://arxiv.org/pdf/2005.11401",
+      "year": 2020
+    },
+    {
+      "document_id": "vit",
+      "filename": "vit.pdf",
+      "title": "An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale",
+      "arxiv": "2010.11929",
+      "url": "https://arxiv.org/pdf/2010.11929",
+      "year": 2020
+    },
+    {
+      "document_id": "lora",
+      "filename": "lora.pdf",
+      "title": "LoRA: Low-Rank Adaptation of Large Language Models",
+      "arxiv": "2106.09685",
+      "url": "https://arxiv.org/pdf/2106.09685",
+      "year": 2021
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1340 720" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0%" stop-color="#F8FAFC"/>
+  <stop offset="100%" stop-color="#EEF2FF"/>
+</linearGradient>
+<filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+  <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+  <feOffset dx="0" dy="3" result="off"/>
+  <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+  <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter>
+<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+  <path d="M0,0 L10,5 L0,10 Z" fill="#475569"/>
+</marker>
+<marker id="arrow-cyan" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+  <path d="M0,0 L10,5 L0,10 Z" fill="#06B6D4"/>
+</marker>
+<marker id="arrow-indigo" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+  <path d="M0,0 L10,5 L0,10 Z" fill="#4F46E5"/>
+</marker>
+<marker id="arrow-amber" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+  <path d="M0,0 L10,5 L0,10 Z" fill="#F59E0B"/>
+</marker>
+</defs>
+<rect width="1340" height="720" fill="url(#bg)"/>
+<text x="670" y="44" text-anchor="middle" font-size="26" font-weight="700" fill="#0F172A">KnowledgeVault Architecture</text>
+<text x="670" y="68" text-anchor="middle" font-size="14" fill="#64748B">PDF → text vectors → dense + BM25 hybrid retrieval</text>
+<text x="670" y="100" text-anchor="middle" font-size="14" fill="#475569" font-weight="700">INGEST PATH</text>
+<rect x="60" y="130" width="180" height="90" rx="12" fill="#FFFFFF" stroke="#475569" stroke-width="2" filter="url(#shadow)"/>
+<text x="150" y="166" text-anchor="middle" font-size="14" font-weight="700" fill="#0F172A">PDF Source</text>
+<text x="150" y="190" text-anchor="middle" font-size="11" fill="#0F172A">attention-is-all-you-need.pdf</text>
+<rect x="260" y="130" width="180" height="90" rx="12" fill="#ECFEFF" stroke="#06B6D4" stroke-width="2" filter="url(#shadow)"/>
+<text x="350" y="166" text-anchor="middle" font-size="14" font-weight="700" fill="#083344">Parser</text>
+<text x="350" y="190" text-anchor="middle" font-size="11" fill="#083344">PyMuPDF + pdfplumber</text>
+<line x1="240" y1="175" x2="260" y2="175" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+<rect x="460" y="130" width="180" height="90" rx="12" fill="#FFFBEB" stroke="#F59E0B" stroke-width="2" filter="url(#shadow)"/>
+<text x="550" y="166" text-anchor="middle" font-size="14" font-weight="700" fill="#451A03">Vision Describer</text>
+<text x="550" y="190" text-anchor="middle" font-size="11" fill="#451A03">gpt-5.4-mini · JSON out</text>
+<line x1="440" y1="175" x2="460" y2="175" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+<rect x="660" y="130" width="180" height="90" rx="12" fill="#EEF2FF" stroke="#4F46E5" stroke-width="2" filter="url(#shadow)"/>
+<text x="750" y="166" text-anchor="middle" font-size="14" font-weight="700" fill="#1E1B4B">Chunker</text>
+<text x="750" y="190" text-anchor="middle" font-size="11" fill="#1E1B4B">300-token windows + metadata</text>
+<line x1="640" y1="175" x2="660" y2="175" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+<rect x="860" y="130" width="180" height="90" rx="12" fill="#ECFDF5" stroke="#10B981" stroke-width="2" filter="url(#shadow)"/>
+<text x="950" y="166" text-anchor="middle" font-size="14" font-weight="700" fill="#064E3B">Embedder</text>
+<text x="950" y="190" text-anchor="middle" font-size="11" fill="#064E3B">text-embedding-3-large</text>
+<line x1="840" y1="175" x2="860" y2="175" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+<rect x="1080" y="130" width="180" height="90" rx="12" fill="#0F172A" stroke="#0F172A" stroke-width="2" filter="url(#shadow)"/>
+<text x="1170" y="166" text-anchor="middle" font-size="14" font-weight="700" fill="#F8FAFC">Qdrant</text>
+<text x="1170" y="190" text-anchor="middle" font-size="11" fill="#F8FAFC">3072-dim cosine + payload</text>
+<line x1="1040" y1="175" x2="1080" y2="175" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+<line x1="60" y1="300" x2="1260" y2="300" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="6 4"/>
+<text x="670" y="330" text-anchor="middle" font-size="14" fill="#475569" font-weight="700">RETRIEVE PATH</text>
+<rect x="60" y="370" width="180" height="90" rx="12" fill="#0F172A" filter="url(#shadow)"/>
+<text x="150" y="406" text-anchor="middle" font-size="14" font-weight="700" fill="#F8FAFC">Query</text>
+<text x="150" y="430" text-anchor="middle" font-size="11" fill="#94A3B8">POST /retrieve</text>
+<rect x="260" y="370" width="180" height="90" rx="12" fill="#ECFEFF" stroke="#06B6D4" stroke-width="2" filter="url(#shadow)"/>
+<text x="350" y="406" text-anchor="middle" font-size="14" font-weight="700" fill="#083344">Embed query</text>
+<text x="350" y="430" text-anchor="middle" font-size="11" fill="#083344">text-embedding-3-large</text>
+<line x1="240" y1="415" x2="260" y2="415" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+<rect x="460" y="370" width="180" height="90" rx="12" fill="#EEF2FF" stroke="#4F46E5" stroke-width="2" filter="url(#shadow)"/>
+<text x="550" y="406" text-anchor="middle" font-size="14" font-weight="700" fill="#1E1B4B">Dense (text)</text>
+<text x="550" y="430" text-anchor="middle" font-size="11" fill="#1E1B4B">Qdrant ANN search</text>
+<line x1="440" y1="415" x2="460" y2="415" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+<rect x="660" y="370" width="180" height="90" rx="12" fill="#FFFBEB" stroke="#F59E0B" stroke-width="2" filter="url(#shadow)"/>
+<text x="750" y="406" text-anchor="middle" font-size="14" font-weight="700" fill="#451A03">Sparse (BM25)</text>
+<text x="750" y="430" text-anchor="middle" font-size="11" fill="#451A03">rank_bm25 inverted</text>
+<line x1="640" y1="415" x2="660" y2="415" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+<rect x="860" y="370" width="180" height="90" rx="12" fill="#ECFDF5" stroke="#10B981" stroke-width="2" filter="url(#shadow)"/>
+<text x="950" y="406" text-anchor="middle" font-size="14" font-weight="700" fill="#064E3B">Fusion (RRF)</text>
+<text x="950" y="430" text-anchor="middle" font-size="11" fill="#064E3B">k=60 default · top-k</text>
+<line x1="840" y1="415" x2="860" y2="415" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+<rect x="1080" y="370" width="180" height="90" rx="12" fill="#FEE2E2" stroke="#F43F5E" stroke-width="2" filter="url(#shadow)"/>
+<text x="1170" y="406" text-anchor="middle" font-size="14" font-weight="700" fill="#9F1239">Result</text>
+<text x="1170" y="430" text-anchor="middle" font-size="11" fill="#9F1239">prose + figure + image_url</text>
+<line x1="1040" y1="415" x2="1080" y2="415" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+<path d="M 1170 370 C 1170 320 1170 270 1170 220" stroke="#06B6D4" stroke-width="2" stroke-dasharray="5 3" fill="none" marker-end="url(#arrow-cyan)"/>
+<text x="1190" y="290" font-size="10" fill="#06B6D4" font-weight="700">query</text>
+<rect x="80" y="510" width="1180" height="170" rx="14" fill="#FEE2E2" stroke="#F43F5E" stroke-width="2" filter="url(#shadow)"/>
+<text x="670" y="540" text-anchor="middle" font-size="14" fill="#9F1239" font-weight="700">3 Deliberate Failure Modes (run them yourself)</text>
+<circle cx="120" cy="575" r="14" fill="#F43F5E"/>
+<text x="120" y="580" text-anchor="middle" font-size="14" fill="#FFFFFF" font-weight="700">①</text>
+<text x="148" y="580" font-size="13" fill="#9F1239" font-weight="700">Vision JSON parse</text>
+<text x="148" y="597" font-size="11" fill="#475569">naïve prompt → no JSON → fix with structured schema + function-calling</text>
+<circle cx="120" cy="610" r="14" fill="#F43F5E"/>
+<text x="120" y="615" text-anchor="middle" font-size="14" fill="#FFFFFF" font-weight="700">②</text>
+<text x="148" y="615" font-size="13" fill="#9F1239" font-weight="700">Qdrant vector size mismatch</text>
+<text x="148" y="632" font-size="11" fill="#475569">wrong embedding model → fix: re-run with --reset flag</text>
+<circle cx="120" cy="645" r="14" fill="#F43F5E"/>
+<text x="120" y="650" text-anchor="middle" font-size="14" fill="#FFFFFF" font-weight="700">③</text>
+<text x="148" y="650" font-size="13" fill="#9F1239" font-weight="700">Missing OPENAI_API_KEY</text>
+<text x="148" y="667" font-size="11" fill="#475569">pydantic-settings raises at startup → fix in .env</text>
+<text x="670" y="702" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="11" fill="#94A3B8">Applied GenAI &amp; Agentic AI Engineering Course · Week 04</text>
+</svg>

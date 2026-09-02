@@ -1,0 +1,15 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.DS_Store
+qdrant_storage/
+data/cache/
+*.egg-info/
+qdrant_local/
+qdrant_storage/
+data/sample/*.pdf
+data/figures/

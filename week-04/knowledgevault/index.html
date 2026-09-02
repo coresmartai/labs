@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<!--
+  Applied GenAI & Agentic AI Engineering Course Week 4
+  KnowledgeVault Demo UI
+
+  DEVIATIONS FROM CORE TEMPLATE:
+  1. No provider selector - the /retrieve endpoint does not expose model selection;
+     vision model is ingest-only and the embedding model is fixed per deployment.
+  2. Results are rendered as chunk cards - RAG retrieval output is far more readable
+     as structured cards (rank, type-badge, page, section, score, text, optional figure
+     image). Raw JSON is still available via the { } Format button.
+  3. checkHealth() is overridden in the WEEK-SPECIFIC block to display all three
+     configured model names (vision, vision_fast, embed) and Qdrant collection name.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Applied GenAI & Agentic AI Engineering Course Week 4</title>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CORE CSS - DO NOT MODIFY
+       ═══════════════════════════════════════════════════════════ -->
+  <style>
+    /* ── CORE: design tokens ── */
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --surface-2: #21262d;
+      --surface-3: #2d333b;
+      --border:    #30363d;
+      --text:      #e6edf3;
+      --text-muted:#7d8590;
+      --blue:      #58a6ff;
+      --blue-dim:  #1f3a5f;
+      --green:     #3fb950;
+      --green-dim: #1a3a28;
+      --red:       #f85149;
+      --red-dim:   #3d1a1a;
+      --orange:    #d29922;
+      --radius:    8px;
+      --mono:      'Fira Code','Cascadia Code','Consolas',monospace;
+    }
+
+    /* ── CORE: reset & base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      font-size: 14px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── CORE: header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 20px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .app-title { font-size: 15px; font-weight: 600; color: var(--text); }
+    .week-badge {
+      font-size: 11px; font-weight: 700;
+      background: var(--blue-dim); color: var(--blue);
+      padding: 2px 8px; border-radius: 20px; font-family: var(--mono);
+    }
+    .header-sub { font-size: 13px; color: var(--text-muted); }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+
+    /* ── CORE: health chip ── */
+    .health-wrap { display: flex; align-items: center; gap: 6px; }
+    #health-chip {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted);
+    }
+    #health-chip.online  { background: var(--green); }
+    #health-chip.offline { background: var(--red);   }
+    #health-text { font-size: 12px; color: var(--text-muted); }
+
+    /* ── CORE: header buttons ── */
+    .btn-icon {
+      background: var(--surface-2); border: 1px solid var(--border);
+      color: var(--text-muted); border-radius: var(--radius);
+      padding: 5px 10px; font-size: 12px; cursor: pointer;
+    }
+    .btn-icon:hover { background: var(--surface-3); color: var(--text); }
+
+    /* ── CORE: two-panel layout ── */
+    .panels {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── CORE: left panel ── */
+    .left-panel {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    .panel-section {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .panel-section:last-child { border-bottom: none; }
+    .section-label {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 10px;
+    }
+
+    /* ── CORE: textarea ── */
+    textarea {
+      width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); font-size: 13px;
+      line-height: 1.5; padding: 10px 12px; resize: vertical;
+      font-family: inherit; min-height: 100px;
+    }
+    textarea:focus { outline: none; border-color: var(--blue); }
+    textarea::placeholder { color: var(--text-muted); }
+
+    /* ── CORE: text / number inputs ── */
+    input[type="text"], input[type="number"] {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); font-size: 13px;
+      padding: 6px 10px; width: 100%;
+    }
+    input[type="text"]:focus, input[type="number"]:focus {
+      outline: none; border-color: var(--blue);
+    }
+    input::placeholder { color: var(--text-muted); }
+
+    /* ── CORE: action buttons ── */
+    .btn-row {
+      display: flex; gap: 8px; padding: 14px 16px;
+      border-top: 1px solid var(--border); flex-shrink: 0;
+    }
+    .btn-primary {
+      flex: 1; background: var(--blue); color: #000;
+      border: none; border-radius: var(--radius);
+      padding: 8px 16px; font-size: 13px; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center;
+      justify-content: center; gap: 6px;
+    }
+    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary {
+      background: var(--surface-2); color: var(--text-muted);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 8px 14px; font-size: 13px; cursor: pointer;
+    }
+    .btn-secondary:hover { background: var(--surface-3); color: var(--text); }
+
+    /* ── CORE: right panel ── */
+    .right-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── CORE: output pane ── */
+    .output-pane {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+    }
+    .pane-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .pane-title { font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .output-tag { font-size: 11px; font-family: var(--mono); color: var(--blue); background: var(--blue-dim); padding: 2px 8px; border-radius: 20px; }
+    .pane-actions { display: flex; gap: 6px; }
+    #output-body {
+      flex: 1; overflow-y: auto; padding: 16px;
+    }
+    .output-placeholder { color: var(--text-muted); font-size: 13px; font-style: italic; }
+
+    /* ── CORE: logs pane ── */
+    .logs-pane {
+      height: 160px;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    #logs-body {
+      flex: 1; overflow-y: auto; padding: 8px 12px;
+      font-family: var(--mono); font-size: 11px; line-height: 1.6;
+    }
+    .log-line { margin-bottom: 2px; }
+    .log-line.info    { color: var(--text-muted); }
+    .log-line.success { color: var(--green); }
+    .log-line.warn    { color: var(--orange); }
+    .log-line.error   { color: var(--red); }
+
+    /* ── CORE: JSON highlight ── */
+    .json-key   { color: #79c0ff; }
+    .json-str   { color: #a5d6ff; }
+    .json-num   { color: var(--green); }
+    .json-bool  { color: #ff7b72; }
+    .json-null  { color: var(--text-muted); }
+    pre.json-out { font-family: var(--mono); font-size: 12px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; }
+
+    /* ── CORE: spinner ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin-m {
+      width: 14px; height: 14px;
+      border: 2px solid rgba(0,0,0,0.3);
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    .loading .spin-m { display: block; }
+
+    /* ── CORE: error box ── */
+    .error-box {
+      background: var(--red-dim); border: 1px solid var(--red);
+      border-radius: var(--radius); padding: 12px 14px;
+      color: var(--red); font-size: 13px; font-family: var(--mono);
+      white-space: pre-wrap; word-break: break-word;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       WEEK-SPECIFIC CSS START
+       ════════════════════════════════════════════════════════════ */
+
+    :root {
+      --purple:     #bc8cff;
+      --purple-dim: #2d1f4a;
+    }
+
+    /* Left panel scrolls when options section is visible */
+    .left-panel { overflow-y: auto; }
+
+    /* Demo pills under the textarea */
+    .demo-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .pill {
+      font-size: 11px; padding: 3px 10px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 20px; color: var(--text-muted); cursor: pointer;
+    }
+    .pill:hover { background: var(--surface-3); color: var(--text); }
+
+    /* Options section layout */
+    .option-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-bottom: 10px;
+    }
+    .option-row:last-child { margin-bottom: 0; }
+    .option-label { font-size: 12px; color: var(--text-muted); flex-shrink: 0; }
+    input[type="range"] { flex: 1; accent-color: var(--blue); }
+    .k-num {
+      width: 44px; height: 30px; text-align: center; font-size: 13px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); padding: 0 6px;
+    }
+
+    /* Result cards */
+    .result-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 14px; margin-bottom: 10px;
+    }
+    .result-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .rank-num {
+      font-size: 11px; font-weight: 700; color: var(--text-muted);
+      font-family: var(--mono);
+    }
+    .chunk-badge {
+      font-size: 10px; font-weight: 700; padding: 2px 8px;
+      border-radius: 20px; font-family: var(--mono);
+    }
+    .chunk-badge.prose  { background: var(--blue-dim);   color: var(--blue);   }
+    .chunk-badge.figure { background: var(--purple-dim); color: var(--purple); }
+    .chunk-badge.table  { background: #3d2e00;           color: var(--orange); }
+    .result-meta  { font-size: 11px; color: var(--text-muted); }
+    .result-score { font-size: 11px; font-family: var(--mono); color: var(--green); }
+    .result-text  {
+      font-size: 13px; line-height: 1.6; color: var(--text);
+      margin-top: 6px; white-space: pre-wrap; word-break: break-word;
+    }
+    .result-image {
+      max-width: 100%; border-radius: var(--radius);
+      border: 1px solid var(--border); margin: 8px 0; display: block;
+    }
+    .no-results { color: var(--text-muted); font-style: italic; font-size: 13px; }
+    .fusion-tag {
+      font-size: 11px; color: var(--text-muted); margin-bottom: 12px;
+      font-family: var(--mono);
+    }
+
+    /* ── PDF document management ── */
+    .pdf-list {
+      width: 100%; height: 60px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text);
+      font-family: var(--mono); font-size: 12px;
+      padding: 4px; cursor: pointer;
+    }
+    /* ── Collection stats ── */
+    .collection-stat { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+    .collection-stat:last-child { margin-bottom: 0; }
+    .stat-label { font-size: 12px; color: var(--text-muted); }
+    .stat-val { font-size: 12px; font-family: var(--mono); color: var(--text); }
+    .pdf-list option { padding: 4px 8px; }
+    .pdf-list option:checked { background: var(--blue-dim); color: var(--blue); }
+    .pdf-count { font-size: 11px; color: var(--text-muted); margin-top: 4px; font-family: var(--mono); }
+    .upload-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+    .filename-display {
+      flex: 1; font-size: 11px; color: var(--text-muted); font-family: var(--mono);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .parent-wrap { margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 6px; }
+    .parent-wrap summary { font-family: var(--mono); font-size: 11px; color: var(--text-muted); cursor: pointer; }
+    .parent-text { color: var(--text-muted); }
+    /* Ingest summary cards */
+    .ingest-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px;
+    }
+    .ingest-card-title { font-size: 12px; font-family: var(--mono); color: var(--blue); margin-bottom: 6px; }
+    .ingest-stat { font-size: 12px; color: var(--text-muted); margin-bottom: 2px; }
+    .ingest-stat span { color: var(--text); font-family: var(--mono); }
+
+    /* ════════════════════════════════════════════════════════════
+       WEEK-SPECIFIC CSS END
+       ════════════════════════════════════════════════════════════ */
+  </style>
+</head>
+<body>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CORE HTML - header
+       ═══════════════════════════════════════════════════════════ -->
+  <header>
+    <div class="header-left">
+      <span class="app-title">Applied GenAI & Agentic AI Engineering Course Week 4</span>
+      <span class="week-badge">Week 4</span>
+      <span class="header-sub">- KnowledgeVault</span>
+    </div>
+    <div class="header-right">
+      <div class="health-wrap">
+        <div id="health-chip"></div>
+        <span id="health-text">-</span>
+      </div>
+      <button class="btn-icon" onclick="checkHealth()">↻ Health</button>
+      <button class="btn-icon" onclick="openReadme()">README</button>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       CORE HTML - two-panel layout
+       ═══════════════════════════════════════════════════════════ -->
+  <div class="panels">
+
+    <!-- LEFT PANEL -->
+    <div class="left-panel">
+
+      <!-- ── 1. Documents + upload ── -->
+      <div class="panel-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div class="section-label" style="margin:0">Documents</div>
+          <button class="btn-icon" style="font-size:11px;padding:3px 8px" onclick="loadPdfs()">↻ Refresh</button>
+        </div>
+        <select id="pdf-select" class="pdf-list">
+          <option disabled value="">No PDFs - click ↻ Refresh</option>
+        </select>
+        <div class="pdf-count" id="pdf-count"></div>
+        <div class="upload-row">
+          <input type="file" id="file-input" accept=".pdf" style="display:none"
+            onchange="onFileChosen(this)">
+          <button class="btn-icon" style="font-size:11px;white-space:nowrap"
+            onclick="document.getElementById('file-input').click()">📁 Choose</button>
+          <span class="filename-display" id="filename-display">No file chosen</span>
+          <button class="btn-icon" id="btn-upload" style="font-size:11px;white-space:nowrap"
+            onclick="doUpload()">📤 Upload</button>
+        </div>
+      </div>
+
+      <!-- ── Ingest buttons (directly below documents) ── -->
+      <div class="panel-section" style="padding:10px 16px;">
+        <div style="display:flex;gap:8px;">
+          <button class="btn-secondary" id="btn-ingest-sel" onclick="doIngestSelected()"
+            style="flex:1;font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px">
+            <div class="spin-m" id="spin-ingest-sel"></div>
+            &#9881;&nbsp;Ingest Selected
+          </button>
+          <button class="btn-secondary" id="btn-ingest-all" onclick="doIngestAll()"
+            style="flex:1;font-size:12px;display:flex;align-items:center;justify-content:center;gap:5px">
+            <div class="spin-m" id="spin-ingest-all"></div>
+            &#9881;&nbsp;Ingest All
+          </button>
+        </div>
+      </div>
+
+      <!-- ── 2. Collection info ── -->
+      <div class="panel-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <div class="section-label" style="margin:0">Collection</div>
+          <button class="btn-icon" style="font-size:11px;padding:3px 8px" onclick="loadCollectionInfo()">↻ Refresh</button>
+        </div>
+        <div class="collection-stat">
+          <span class="stat-label">Name</span>
+          <span id="col-name" class="stat-val">-</span>
+        </div>
+        <div class="collection-stat">
+          <span class="stat-label">Points indexed</span>
+          <span id="col-points" class="stat-val">-</span>
+        </div>
+      </div>
+
+      <!-- ── 3. Retrieval query (flex:1 to fill remaining space) ── -->
+      <div class="panel-section" style="flex:1;display:flex;flex-direction:column;">
+        <div class="section-label">Retrieval Query</div>
+        <textarea id="notes" rows="7"
+          placeholder="e.g. Why do the authors use self-attention instead of recurrence?"></textarea>
+        <div class="demo-pills">
+          <button class="pill" onclick="fillDemo()">&#8635; Self-attention</button>
+          <button class="pill" onclick="fillFigureDemo()">&#8635; Scaled dot-product</button>
+          <button class="pill" onclick="fillOodDemo()">&#8635; Out-of-domain</button>
+        </div>
+      </div>
+
+      <!-- ── 4. Retrieval options ── -->
+      <div class="panel-section">
+        <div class="section-label">Retrieval Options</div>
+        <div class="option-row">
+          <span class="option-label">Top-k</span>
+          <input type="range" id="k-slider" min="1" max="20" value="5"
+            oninput="syncK(this)" onchange="syncK(this)" />
+          <input type="number" id="k-num" class="k-num" min="1" max="20" value="5"
+            oninput="syncK(this)" onchange="syncK(this)" />
+        </div>
+        <div class="option-row">
+          <span class="option-label">Doc filter</span>
+          <input type="text" id="inp-docid" placeholder="document ID (optional)" />
+        </div>
+        <div class="option-row">
+          <span class="option-label">Widen</span>
+          <label style="display:flex;gap:8px;align-items:center;font-size:12px;color:var(--text-muted);cursor:pointer">
+            <input type="checkbox" id="chk-widen" />
+            match the 300-token child, show its 1,500-token parent
+          </label>
+        </div>
+      </div>
+
+      <!-- ── 5. Retrieve action button ── -->
+      <div class="btn-row">
+        <button class="btn-primary" id="btn-main" onclick="doRetrieve()">
+          <div class="spin-m" id="spin-main"></div>
+          &#128269;&nbsp; Retrieve
+        </button>
+      </div>
+
+    </div><!-- /left-panel -->
+
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
+
+      <!-- ── CORE: output pane ── -->
+      <div class="output-pane">
+        <div class="pane-header">
+          <span class="pane-title">Output</span>
+          <span class="output-tag" id="output-tag">/retrieve</span>
+          <div class="pane-actions">
+            <button class="btn-icon" id="btn-format" onclick="toggleFormat()"
+              style="display:none">{ } Format</button>
+            <button class="btn-icon" onclick="clearOutput()">Clear</button>
+          </div>
+        </div>
+        <div id="output-body">
+          <p class="output-placeholder">Results will appear here after you click Retrieve.</p>
+        </div>
+      </div>
+
+      <!-- ── CORE: logs pane ── -->
+      <div class="logs-pane">
+        <div class="pane-header">
+          <span class="pane-title">Logs</span>
+          <div class="pane-actions">
+            <button class="btn-icon" onclick="clearLogs()">Clear</button>
+          </div>
+        </div>
+        <div id="logs-body"></div>
+      </div>
+
+    </div><!-- /right-panel -->
+
+  </div><!-- /panels -->
+
+  <!-- ═══════════════════════════════════════════════════════════
+       JAVASCRIPT
+       ═══════════════════════════════════════════════════════════ -->
+  <script>
+    /* ════════════════════════════════════════════════════════════
+       WEEK-SPECIFIC JS START
+       ════════════════════════════════════════════════════════════ */
+
+    // WEEK-SPECIFIC state
+    const DEMO_NOTES  = 'Why do the authors use self-attention instead of recurrence in the Transformer?';
+    const DEMO_FIGURE = 'What does the scaled dot-product attention diagram show?';
+    const DEMO_OOD    = 'What is the best recipe for chocolate chip cookies?';
+
+    // Override checkHealth to display all three configured models
+    async function checkHealth() {
+      const chip = document.getElementById('health-chip');
+      const txt  = document.getElementById('health-text');
+      chip.className = ''; txt.textContent = 'Checking...';
+      try {
+        const r    = await fetch(`${API}/health`);
+        const data = await r.json();
+        chip.className  = 'online';
+        txt.textContent = `Online - ${data.vision_model}`;
+        addLog('success', `Health OK - vision: ${data.vision_model} | fast: ${data.vision_fast_model}`);
+        addLog('info',    `Embed: ${data.embed_model}`);
+        addLog('info',    `Collection: ${data.collection}`);
+      } catch (e) {
+        chip.className  = 'offline';
+        txt.textContent = 'Offline';
+        addLog('error', `Health check failed - is the server running? (${e.message})`);
+      }
+    }
+
+    function fillDemo()       { document.getElementById('notes').value = DEMO_NOTES;  addLog('info', 'Text query loaded.');           }
+    function fillFigureDemo() { document.getElementById('notes').value = DEMO_FIGURE; addLog('info', 'Figure query loaded.');         }
+    function fillOodDemo()    { document.getElementById('notes').value = DEMO_OOD;    addLog('info', 'Out-of-domain query loaded.');   }
+
+    function syncK(src) {
+      const v = Math.max(1, Math.min(20, parseInt(src.value) || 5));
+      document.getElementById('k-slider').value = v;
+      document.getElementById('k-num').value    = v;
+    }
+
+    async function doRetrieve() {
+      const query = document.getElementById('notes').value.trim();
+      if (!query) { addLog('warn', 'Query is empty.'); return; }
+
+      const k     = parseInt(document.getElementById('k-num').value) || 5;
+      const docId = document.getElementById('inp-docid').value.trim() || null;
+      const widen = document.getElementById('chk-widen').checked;
+
+      clearOutput(); setLoading(true);
+      document.getElementById('output-tag').textContent = '/retrieve';
+      addLog('info', `POST /retrieve k=${k}${docId ? ' filter=' + docId : ''}${widen ? ' widen=true' : ''}`);
+
+      try {
+        const payload = { query, k };
+        if (docId) payload.document_id = docId;
+        if (widen) payload.widen = true;
+        const r    = await fetch(`${API}/retrieve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await r.json();
+        if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+
+        _rawOutputText = JSON.stringify(data, null, 2);
+        _showFormatBtn(true);
+
+        renderChunks(data);
+        addLog('success', `${data.chunks.length} chunk(s) returned - fusion: ${data.fusion}`);
+      } catch (e) {
+        document.getElementById('output-body').innerHTML =
+          `<div class="error-box">${escHtml(e.message)}</div>`;
+        addLog('error', e.message);
+      } finally { setLoading(false); }
+    }
+
+    // doMain is the alias the CORE btn-primary calls
+    const doMain = doRetrieve;
+
+    // ── Document management ──────────────────────────────────────────────────
+
+    async function loadPdfs() {
+      const sel = document.getElementById('pdf-select');
+      const cnt = document.getElementById('pdf-count');
+      sel.innerHTML = '<option disabled value="">Loading...</option>';
+      cnt.textContent = '';
+      try {
+        const r    = await fetch(`${API}/pdfs`);
+        const data = await r.json();
+        if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+        sel.innerHTML = '';
+        if (!data.pdfs.length) {
+          sel.innerHTML = '<option disabled value="">No PDFs - upload one below</option>';
+          cnt.textContent = `0 PDFs in ${data.directory}`;
+        } else {
+          data.pdfs.forEach(pdf => {
+            const opt   = document.createElement('option');
+            opt.value   = `${data.directory}/${pdf.filename}`;
+            opt.textContent = `${pdf.filename}  (${pdf.size_kb} KB)`;
+            sel.appendChild(opt);
+          });
+          sel.selectedIndex = 0;
+          cnt.textContent = `${data.count} PDF${data.count === 1 ? '' : 's'} in ${data.directory}`;
+        }
+        addLog('info', `${data.count} PDF(s) in ${data.directory}`);
+      } catch (e) {
+        sel.innerHTML = '<option disabled value="">Error - is the server running?</option>';
+        addLog('error', `loadPdfs: ${e.message}`);
+      }
+    }
+
+    function onFileChosen(input) {
+      document.getElementById('filename-display').textContent =
+        input.files.length ? input.files[0].name : 'No file chosen';
+    }
+
+    async function doUpload() {
+      const input = document.getElementById('file-input');
+      if (!input.files.length) { addLog('warn', 'No file chosen - click 📁 Choose first.'); return; }
+      const file = input.files[0];
+      const form = new FormData();
+      form.append('file', file);
+      const btn = document.getElementById('btn-upload');
+      btn.disabled = true;
+      addLog('info', `Uploading ${file.name} (${Math.round(file.size / 1024)} KB)...`);
+      try {
+        const r    = await fetch(`${API}/upload`, { method: 'POST', body: form });
+        const data = await r.json();
+        if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+        addLog('success', `Uploaded: ${data.filename} (${Math.round(data.size_bytes / 1024)} KB)`);
+        input.value = '';
+        document.getElementById('filename-display').textContent = 'No file chosen';
+        await loadPdfs();
+      } catch (e) {
+        addLog('error', `Upload failed: ${e.message}`);
+      } finally { btn.disabled = false; }
+    }
+
+    async function doIngestSelected() {
+      const pdfPath = document.getElementById('pdf-select').value;
+      if (!pdfPath) { addLog('warn', 'No PDF selected - choose one from the Documents list.'); return; }
+      const filename = pdfPath.split(/[\\/]/).pop();
+      clearOutput();
+      document.getElementById('output-tag').textContent = '/ingest';
+      addLog('info', `POST /ingest?pdf_path=${pdfPath}`);
+      _setIngestLoading(true);
+      try {
+        const r    = await fetch(`${API}/ingest?pdf_path=${encodeURIComponent(pdfPath)}`, { method: 'POST' });
+        const data = await r.json();
+        if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+        _rawOutputText = JSON.stringify(data, null, 2);
+        _showFormatBtn(true);
+        renderIngestSummaries([data.summary]);
+        addLog('success', `Ingested ${filename}: ${data.summary.chunks} chunks`);
+      } catch (e) {
+        document.getElementById('output-body').innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+        addLog('error', e.message);
+      } finally { _setIngestLoading(false); loadCollectionInfo(); }
+    }
+
+    async function doIngestAll() {
+      clearOutput();
+      document.getElementById('output-tag').textContent = '/ingest/all';
+      addLog('info', 'POST /ingest/all - ingesting all PDFs in data directory...');
+      _setIngestLoading(true);
+      try {
+        const r    = await fetch(`${API}/ingest/all`, { method: 'POST' });
+        const data = await r.json();
+        if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+        _rawOutputText = JSON.stringify(data, null, 2);
+        _showFormatBtn(true);
+        renderIngestSummaries(data.summaries, data.errors);
+        addLog('success', `Ingested ${data.summaries.length} PDF(s). Errors: ${data.errors.length}`);
+      } catch (e) {
+        document.getElementById('output-body').innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+        addLog('error', e.message);
+      } finally { _setIngestLoading(false); loadCollectionInfo(); }
+    }
+
+    function renderIngestSummaries(summaries = [], errors = []) {
+      const body = document.getElementById('output-body');
+      let html = `<div class="fusion-tag">ingest complete &middot; ${summaries.length} PDF(s)</div>`;
+      summaries.forEach(s => {
+        const name = (s.pdf || '').split(/[\\/]/).pop();
+        html += `<div class="ingest-card">
+  <div class="ingest-card-title">&#128196; ${escHtml(name)}</div>
+  <div class="ingest-stat">Blocks parsed: <span>${s.blocks}</span></div>
+  <div class="ingest-stat">Chunks indexed: <span>${s.chunks}</span></div>
+  <div class="ingest-stat">Figures described: <span>${s.figures_described}</span></div>
+  <div class="ingest-stat">Figures dropped (low confidence): <span>${s.figures_dropped}</span></div>
+</div>`;
+      });
+      errors.forEach(e => {
+        html += `<div class="error-box" style="margin-bottom:8px">&#10060; ${escHtml(e.pdf)}: ${escHtml(e.error)}</div>`;
+      });
+      body.innerHTML = html;
+    }
+
+    function _setIngestLoading(on) {
+      // Only disable the ingest buttons - Retrieve stays active
+      ['btn-ingest-sel', 'btn-ingest-all'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = on;
+      });
+      ['spin-ingest-sel', 'spin-ingest-all'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = on ? 'block' : 'none';
+      });
+    }
+
+    async function loadCollectionInfo() {
+      const nameEl   = document.getElementById('col-name');
+      const pointsEl = document.getElementById('col-points');
+      nameEl.textContent = '...'; pointsEl.textContent = '...';
+      try {
+        const r    = await fetch(`${API}/collection`);
+        const data = await r.json();
+        nameEl.textContent   = data.collection || '-';
+        pointsEl.textContent = data.points !== null && data.points !== undefined
+          ? Number(data.points).toLocaleString() + ' pts'
+          : 'unavailable';
+        if (data.status && data.status !== 'green' && data.status !== 'CollectionStatus.GREEN') {
+          addLog('warn', `Collection status: ${data.status}`);
+        } else {
+          addLog('info', `Collection: ${data.collection} - ${data.points} points`);
+        }
+      } catch(e) {
+        nameEl.textContent   = '-';
+        pointsEl.textContent = 'error';
+        addLog('error', `loadCollectionInfo: ${e.message}`);
+      }
+    }
+
+    function renderChunks(data) {
+      const body = document.getElementById('output-body');
+      if (!data.chunks || data.chunks.length === 0) {
+        body.innerHTML = '<p class="no-results">No chunks retrieved - query may be out-of-domain or the index is empty. No hallucination risk: the LLM downstream receives nothing to fabricate on.</p>';
+        return;
+      }
+      const fusionHtml = `<div class="fusion-tag">fusion: ${escHtml(data.fusion)} &middot; query: ${escHtml(data.query.slice(0, 80))}${data.query.length > 80 ? '...' : ''}</div>`;
+      const cardsHtml  = data.chunks.map((c, i) => {
+        const type  = c.chunk_type === 'figure-description' ? 'figure'
+                    : c.chunk_type === 'table-row'          ? 'table' : 'prose';
+        const heading = c.section_heading ? ` &middot; ${escHtml(c.section_heading)}` : '';
+        const imgHtml = c.image_url
+          ? `<img class="result-image" src="${escHtml(c.image_url)}" alt="Figure" onerror="this.style.display='none'">`
+          : '';
+        return `<div class="result-card">
+  <div class="result-header">
+    <div style="display:flex;gap:8px;align-items:center">
+      <span class="rank-num">#${i + 1}</span>
+      <span class="chunk-badge ${type}">${type}</span>
+    </div>
+    <div style="display:flex;gap:12px;align-items:center">
+      <span class="result-meta">${escHtml(c.document_id || '')} &middot; p.${c.page_number}${heading}</span>
+      <span class="result-score">RRF ${c.score.toFixed(4)}</span>
+    </div>
+  </div>
+  ${imgHtml}
+  <p class="result-text">${escHtml(c.text)}</p>
+  ${c.parent_text ? `<details class="parent-wrap"><summary>Parent span (${escHtml(c.parent_id || '')}) &middot; ${c.parent_text.split(/\s+/).length} words</summary><p class="result-text parent-text">${escHtml(c.parent_text)}</p></details>` : ''}
+</div>`;
+      }).join('');
+      body.innerHTML = fusionHtml + cardsHtml;
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       WEEK-SPECIFIC JS END
+       ════════════════════════════════════════════════════════════ */
+
+
+    /* ════════════════════════════════════════════════════════════
+       CORE JS - DO NOT MODIFY
+       ════════════════════════════════════════════════════════════ */
+
+    // ── CORE: API base URL ──
+    const API = 'http://localhost:8000';
+
+    // ── CORE: internal state ──
+    let _rawOutputText  = '';
+    let _showingRaw     = false;
+
+    // ── CORE: _fmtDetail ──
+    function _fmtDetail(detail, fallback) {
+      if (!detail) return fallback;
+      if (typeof detail === 'string') return detail;
+      if (Array.isArray(detail)) {
+        return detail.map(d => {
+          const loc = d.loc ? d.loc.join(' › ') : '';
+          return `[${loc}] ${d.msg}`;
+        }).join('\n');
+      }
+      return JSON.stringify(detail);
+    }
+
+    // ── CORE: _showFormatBtn ──
+    function _showFormatBtn(show) {
+      document.getElementById('btn-format').style.display = show ? '' : 'none';
+      _showingRaw = false;
+    }
+
+    // ── CORE: toggleFormat ──
+    function toggleFormat() {
+      if (!_rawOutputText) return;
+      if (_showingRaw) {
+        // switch back to rendered view - re-run render
+        try {
+          const data = JSON.parse(_rawOutputText);
+          renderChunks(data);
+        } catch (_) {
+          document.getElementById('output-body').innerHTML =
+            `<pre class="json-out">${escHtml(_rawOutputText)}</pre>`;
+        }
+        document.getElementById('btn-format').textContent = '{ } Format';
+        _showingRaw = false;
+      } else {
+        document.getElementById('output-body').innerHTML =
+          `<pre class="json-out">${highlightJSON(_rawOutputText)}</pre>`;
+        document.getElementById('btn-format').textContent = '&#8617; Cards';
+        _showingRaw = true;
+      }
+    }
+
+    // ── CORE: addLog ──
+    function addLog(level, msg) {
+      const body = document.getElementById('logs-body');
+      const ts   = new Date().toTimeString().slice(0, 8);
+      const line = document.createElement('div');
+      line.className = `log-line ${level}`;
+      line.textContent = `[${ts}] ${msg}`;
+      body.appendChild(line);
+      body.scrollTop = body.scrollHeight;
+    }
+
+    // ── CORE: clearOutput ──
+    function clearOutput() {
+      document.getElementById('output-body').innerHTML =
+        '<p class="output-placeholder">Results will appear here after you click Retrieve.</p>';
+      _showFormatBtn(false);
+      _rawOutputText = '';
+      _showingRaw    = false;
+    }
+
+    // ── CORE: clearLogs ──
+    function clearLogs() {
+      document.getElementById('logs-body').innerHTML = '';
+    }
+
+    // ── CORE: highlightJSON ──
+    function highlightJSON(jsonStr) {
+      return escHtml(jsonStr).replace(
+        /("(\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+        match => {
+          let cls = 'json-num';
+          if (/^"/.test(match)) {
+            cls = /:$/.test(match) ? 'json-key' : 'json-str';
+          } else if (/true|false/.test(match)) {
+            cls = 'json-bool';
+          } else if (/null/.test(match)) {
+            cls = 'json-null';
+          }
+          return `<span class="${cls}">${match}</span>`;
+        }
+      );
+    }
+
+    // ── CORE: escHtml ──
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // ── CORE: setLoading ──
+    function setLoading(on) {
+      const btn  = document.getElementById('btn-main');
+      const spin = document.getElementById('spin-main');
+      btn.disabled = on;
+      if (on) {
+        btn.classList.add('loading');
+        if (spin) spin.style.display = 'block';
+      } else {
+        btn.classList.remove('loading');
+        if (spin) spin.style.display = 'none';
+      }
+    }
+
+    // ── CORE: openReadme ──
+    function openReadme() {
+      window.open(`${API}/readme`, '_blank');
+    }
+
+    // ── CORE: Init ──
+    (function init() {
+      addLog('info', 'KnowledgeVault UI loaded. Checking server...');
+      checkHealth();
+      loadPdfs();
+      loadCollectionInfo();
+    })();
+
+    /* ════════════════════════════════════════════════════════════
+       CORE JS END
+       ════════════════════════════════════════════════════════════ */
+  </script>
+</body>
+</html>
