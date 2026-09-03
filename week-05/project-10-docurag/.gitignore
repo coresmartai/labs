@@ -1,0 +1,16 @@
+.env
+.env.local
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.coverage
+*.log
+# data/golden_dataset.json is checked in on purpose: it is the reference eval
+# set the video and README numbers were produced from. Regenerate with
+# scripts/build_golden_dataset.py against your own index; the embedded store
+# itself must never be committed.
+qdrant_local/

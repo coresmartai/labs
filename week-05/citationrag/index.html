@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<!--
+  Applied GenAI & Agentic AI Engineering Course
+  Week 5 · CitationRAG
+  ================================================
+  Based on: _templates/index.template.html
+
+  Intentional deviations (documented, not force-fit):
+    1. id="notes" textarea labelled "Your Question" - classifier-style label
+       doesn't fit; this is a Q&A interface, "Question" is accurate.
+    2. Output pane renders a custom citation layout (answer + citation cards +
+       scores bar) instead of raw JSON; raw JSON still available via { } Format.
+    3. Second action button "Run Full Eval" uses btn-secondary, not streaming -
+       /eval is a synchronous batch call (no SSE); that's by design for Week 5.
+    4. left-panel has 3+ sections so overflow-y:auto is added in week-specific CSS.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Applied GenAI & Agentic AI Engineering - Week 5 · CitationRAG</title>
+  <style>
+    /* ══════════════════════════════════════════════════════════════
+       CORE - DO NOT EDIT (shared across all weeks)
+       ══════════════════════════════════════════════════════════════ */
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0d1117;
+      --surface:     #161b22;
+      --surface-2:   #21262d;
+      --surface-3:   #2d333b;
+      --border:      #30363d;
+      --text:        #e6edf3;
+      --text-muted:  #7d8590;
+      --blue:        #58a6ff;
+      --blue-dim:    #1f3a5f;
+      --green:       #3fb950;
+      --green-dim:   #1a3a28;
+      --red:         #f85149;
+      --red-dim:     #3d1a1a;
+      --orange:      #d29922;
+      --radius:      8px;
+      --mono:        'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; height: 52px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 15px; font-weight: 600; color: var(--text);
+    }
+    .header-title .logo {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #1a56db, #7e3af2);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+    }
+    .week-badge {
+      background: var(--blue-dim); color: var(--blue);
+      font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 20px;
+      border: 1px solid #1f4080;
+    }
+    .header-sub { color: var(--text-muted); font-weight: 400; }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+
+    button {
+      cursor: pointer; border: none; border-radius: var(--radius);
+      font-size: 13px; font-weight: 500;
+      transition: opacity 0.15s, transform 0.1s;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .btn-ghost {
+      background: transparent; color: var(--text-muted);
+      border: 1px solid var(--border); padding: 6px 12px;
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+
+    .btn-primary { background: #1a56db; color: #fff; padding: 8px 16px; }
+    .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+
+    .btn-secondary {
+      background: var(--surface-2); color: var(--text);
+      border: 1px solid var(--border); padding: 8px 16px;
+    }
+    .btn-secondary:hover:not(:disabled) { background: var(--surface-3); }
+
+    .btn-demo {
+      background: transparent; color: var(--blue);
+      border: 1px solid var(--blue-dim); padding: 5px 12px; font-size: 12px;
+    }
+    .btn-demo:hover:not(:disabled) { background: var(--blue-dim); }
+
+    #health-chip {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px;
+      font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text-muted);
+    }
+    #health-chip:hover { background: var(--surface-3); }
+    #health-chip.online  { color: var(--green); border-color: #1a4a2e; }
+    #health-chip.offline { color: var(--red);   border-color: #4a1a1a; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+    .online  .dot { background: var(--green); box-shadow: 0 0 6px #3fb95088; animation: pulse 2s infinite; }
+    .offline .dot { background: var(--red); }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    main {
+      display: grid; grid-template-columns: 380px 1fr;
+      flex: 1; overflow: hidden;
+    }
+
+    .left-panel {
+      display: flex; flex-direction: column;
+      border-right: 1px solid var(--border); overflow: hidden;
+    }
+
+    .panel-section { padding: 16px; border-bottom: 1px solid var(--border); }
+    .panel-section:last-child { border-bottom: none; }
+
+    label {
+      display: block; font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); margin-bottom: 8px;
+    }
+
+    textarea, input[type="text"], select {
+      width: 100%; background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text); font-size: 13px; font-family: inherit;
+      outline: none; transition: border-color 0.15s;
+    }
+    textarea { resize: none; }
+    textarea:focus, input:focus, select:focus {
+      border-color: var(--blue); box-shadow: 0 0 0 3px #1a56db22;
+    }
+
+    #notes {
+      flex: 1; min-height: 0; height: 0;
+      padding: 10px 12px; line-height: 1.6;
+    }
+
+    input[type="text"] { padding: 8px 12px; height: 38px; }
+    select { padding: 8px 12px; height: 38px; cursor: pointer; }
+    select option { background: var(--surface-2); }
+
+    .input-row {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 8px;
+    }
+
+    .action-btns { display: flex; flex-direction: column; gap: 8px; padding: 16px; }
+    .action-btns button { width: 100%; justify-content: center; }
+
+    .right-panel { display: flex; flex-direction: column; overflow: hidden; }
+
+    .pane { display: flex; flex-direction: column; overflow: hidden; }
+    .pane-output { flex: 1; border-bottom: 1px solid var(--border); }
+    .pane-logs   { height: 200px; flex-shrink: 0; }
+
+    .pane-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); flex-shrink: 0;
+    }
+
+    .pane-body {
+      flex: 1; overflow-y: auto; padding: 12px 14px;
+      font-family: var(--mono); font-size: 13px; line-height: 1.6;
+    }
+    .pane-body::-webkit-scrollbar { width: 6px; }
+    .pane-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .placeholder-msg { color: var(--text-muted); font-family: inherit; font-size: 13px; font-style: italic; }
+
+    .j-k    { color: #79c0ff; }
+    .j-s    { color: #a5d6ff; }
+    .j-n    { color: #ffa657; }
+    .j-b    { color: #7ee787; }
+    .j-null { color: var(--text-muted); }
+
+    .log-entry { display: flex; gap: 10px; padding: 2px 0; font-size: 12px; line-height: 1.5; }
+    .log-ts    { color: var(--text-muted); flex-shrink: 0; }
+    .log-level { font-weight: 700; flex-shrink: 0; width: 50px; }
+    .log-msg   { color: var(--text); word-break: break-word; }
+    .log-info    .log-level { color: var(--blue); }
+    .log-success .log-level { color: var(--green); }
+    .log-warn    .log-level { color: var(--orange); }
+    .log-error   .log-level { color: var(--red); }
+
+    .spinner {
+      display: none; width: 14px; height: 14px;
+      border: 2px solid var(--border); border-top-color: var(--blue);
+      border-radius: 50%; animation: spin 0.6s linear infinite; flex-shrink: 0;
+    }
+    .spinner.active { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: var(--red-dim); border: 1px solid #6b2020;
+      border-radius: var(--radius); padding: 12px;
+      color: var(--red); font-family: var(--mono); font-size: 12px; white-space: pre-wrap;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       WEEK-SPECIFIC START
+       ══════════════════════════════════════════════════════════════ */
+
+    /* Left panel scrolls - 3 sections (question + thresholds + buttons) */
+    .left-panel { overflow-y: auto; }
+
+    /* Amber for "refused" state */
+    :root {
+      --amber:     #d29922;
+      --amber-dim: #2d2000;
+    }
+
+    /* Demo question pills */
+    .demo-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+    .demo-pill {
+      font-size: 11px; padding: 3px 9px;
+      background: var(--surface-3); color: var(--text-muted);
+      border: 1px solid var(--border); border-radius: 20px;
+      cursor: pointer; transition: all 0.15s; line-height: 1.5;
+    }
+    .demo-pill:hover { background: var(--blue-dim); color: var(--blue); border-color: #1f4080; }
+
+    /* Threshold display row */
+    .threshold-row {
+      display: flex; gap: 8px; align-items: center;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 8px 12px;
+    }
+    .threshold-row .t-label { font-size: 11px; color: var(--text-muted); flex: 1; }
+    .threshold-row .t-val   { font-family: var(--mono); font-size: 12px; color: var(--blue); font-weight: 700; }
+
+    /* ── Pipeline step layout ──────────────────────────────── */
+    .step-block { margin-bottom: 13px; }
+    .step-label {
+      font-size: 10px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.07em; color: var(--text-muted);
+      display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+    }
+    .step-label::after { content:''; flex:1; height:1px; background:var(--border); }
+    .step-num {
+      width: 18px; height: 18px; border-radius: 50%;
+      font-size: 9px; font-weight: 800; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--surface-2); border: 1px solid var(--border); color: var(--text-muted);
+    }
+
+    /* Query display */
+    .query-display {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px; color: var(--text); line-height: 1.5;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 7px 12px;
+    }
+
+    /* Expandable chunk rows */
+    .chunk-details {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); margin-bottom: 3px; overflow: hidden;
+    }
+    .chunk-details[open] { border-color: var(--border); }
+    .chunk-summary {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 10px; cursor: pointer; user-select: none; list-style: none;
+    }
+    .chunk-summary::-webkit-details-marker { display: none; }
+    .chunk-summary::marker { display: none; }
+    .chunk-summary:hover { background: var(--surface-3); }
+    .chunk-preview {
+      flex: 1; font-size: 12px; color: var(--text-muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      font-family: -apple-system, sans-serif;
+    }
+    .chunk-toggle {
+      font-size: 10px; font-family: var(--mono); color: var(--blue); flex-shrink: 0;
+      background: var(--blue-dim); border: 1px solid #1f4080;
+      border-radius: 3px; padding: 1px 6px;
+    }
+    .chunk-details[open] .chunk-toggle::before { content: '▾ collapse'; }
+    .chunk-toggle::before { content: '▸ expand'; }
+    .chunk-full {
+      padding: 10px 14px; font-size: 12px; color: var(--text);
+      line-height: 1.65; border-top: 1px solid var(--border);
+      white-space: pre-wrap; word-break: break-word;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    /* Shared badge */
+    .citation-id {
+      font-family: var(--mono); font-size: 11px; font-weight: 700;
+      color: var(--blue); background: var(--blue-dim);
+      padding: 2px 7px; border-radius: 4px; flex-shrink: 0;
+    }
+    .rc-score { font-family: var(--mono); font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+
+    /* Scores bar */
+    .scores-bar {
+      display: flex; flex-wrap: wrap; gap: 0;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+    }
+    .score-item {
+      flex: 1; min-width: 90px;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 6px 4px; border-right: 1px solid var(--border);
+    }
+    .score-item:last-child { border-right: none; }
+    .s-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 3px; }
+    .s-val   { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--text); }
+    .score-item.s-green .s-val { color: var(--green); }
+    .score-item.s-amber .s-val { color: var(--amber); }
+    .score-item.s-red   .s-val { color: var(--red); }
+
+    /* Answer box */
+    .answer-box {
+      background: var(--green-dim); border: 1px solid #1a4a2e;
+      border-radius: var(--radius); padding: 10px 13px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px; color: var(--text); line-height: 1.65;
+    }
+    .cite-marker {
+      color: var(--blue); font-family: var(--mono); font-size: 12px;
+      font-weight: 700; background: var(--blue-dim);
+      padding: 1px 4px; border-radius: 3px;
+    }
+
+    /* Citation cards */
+    .citation-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 7px 11px; margin-bottom: 4px;
+    }
+    .citation-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .badge-valid   { font-size: 11px; color: var(--green); font-weight: 700; }
+    .badge-invalid { font-size: 11px; color: var(--red);   font-weight: 700; }
+    .citation-quote {
+      font-size: 12px; color: var(--text-muted); font-style: italic; line-height: 1.55;
+      border-left: 2px solid var(--border); padding-left: 9px; margin: 0;
+    }
+
+    /* Refused box */
+    .refused-box {
+      background: var(--amber-dim); border: 1px solid #5a3a00;
+      border-radius: var(--radius); padding: 9px 12px;
+    }
+    .refused-top  { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
+
+    /* Raw model output (shown on validation failures) */
+    .raw-model-block {
+      margin-top: 12px;
+      background: var(--red-dim); border: 1px solid #6b2020;
+      border-radius: var(--radius); padding: 10px 13px;
+    }
+    .raw-model-label {
+      font-size: 10px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.07em; color: var(--red); margin-bottom: 8px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .raw-answer-text {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px; color: var(--text); line-height: 1.65;
+      margin-bottom: 10px; padding: 8px 10px;
+      background: #2a0f0f; border-radius: 4px;
+    }
+    .fail-detail {
+      font-size: 11px; font-family: var(--mono);
+      color: var(--red); background: #1a0808;
+      border: 1px solid #6b2020; border-radius: 4px;
+      padding: 6px 10px; margin-bottom: 8px;
+      word-break: break-all; white-space: pre-wrap;
+    }
+    .raw-citation {
+      background: #2a0f0f; border: 1px solid #6b2020;
+      border-radius: 4px; padding: 7px 10px; margin-bottom: 5px;
+    }
+    .raw-citation-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+    .badge-fail { font-size: 11px; color: var(--red); font-weight: 700; }
+    .raw-quote  { font-size: 12px; color: #e07070; font-style: italic; line-height: 1.5; }
+    .refused-icon { font-size: 18px; flex-shrink: 0; }
+    .refused-msg  {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px; color: var(--text); line-height: 1.55;
+    }
+    .refused-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+    .rtag {
+      font-size: 11px; font-family: var(--mono); font-weight: 600;
+      padding: 2px 8px; border-radius: 4px;
+      border: 1px solid var(--border); background: var(--surface-3); color: var(--text-muted);
+    }
+    .rtag-gate  { color: var(--amber); border-color: #5a3a00; background: #2d2000; }
+    .rtag-llm   { color: #bc8cff;      border-color: #3a1f5f; background: #1e0f33; }
+    .rtag-valid { color: var(--red);    border-color: #6b2020; background: var(--red-dim); }
+
+    /* Eval metrics grid */
+    .eval-header { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+    .metrics-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+      gap: 8px; margin-bottom: 14px;
+    }
+    .metric-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 8px; text-align: center;
+    }
+    .metric-card.mc-good { border-color: #1a4a2e; background: #0d1f16; }
+    .metric-card.mc-warn { border-color: #5a3a00; background: #1a1000; }
+    .mc-icon  { font-size: 16px; margin-bottom: 4px; }
+    .mc-val   { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--text); }
+    .mc-good .mc-val { color: var(--green); }
+    .mc-warn .mc-val { color: var(--amber); }
+    .mc-label { font-size: 10px; color: var(--text-muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+    /* Eval row-by-row breakdown */
+    .eval-rows-label {
+      font-size: 10px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.07em; color: var(--text-muted);
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    }
+    .eval-rows-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+    /* Each eval row is a <details> - collapsed = compact, open = full pipeline */
+    .eval-row {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); margin-bottom: 5px; overflow: hidden;
+    }
+    .eval-row.er-pass { border-left: 3px solid var(--green); }
+    .eval-row.er-fail { border-left: 3px solid var(--red); }
+    .eval-row[open] { border-color: var(--border); }
+
+    .er-summary {
+      display: flex; flex-direction: column; gap: 3px;
+      padding: 7px 12px; cursor: pointer; user-select: none; list-style: none;
+    }
+    .er-summary::-webkit-details-marker { display: none; }
+    .er-summary::marker { display: none; }
+    .er-summary:hover { background: var(--surface-3); }
+
+    .er-top   { display: flex; align-items: center; gap: 7px; }
+    .er-num   { font-family: var(--mono); font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
+    .er-badge { font-size: 10px; font-weight: 800; padding: 1px 7px; border-radius: 3px; flex-shrink: 0; }
+    .er-pass-badge { background: var(--green-dim); color: var(--green); }
+    .er-fail-badge { background: var(--red-dim);   color: var(--red); }
+    .er-toggle { font-size: 10px; font-family: var(--mono); color: var(--blue); flex-shrink: 0;
+      background: var(--blue-dim); border: 1px solid #1f4080; border-radius: 3px; padding: 1px 6px;
+      margin-left: auto; }
+    .eval-row[open] .er-toggle::before { content: '▾ collapse'; }
+    .er-toggle::before { content: '▸ expand'; }
+
+    .er-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+    .er-chip  {
+      font-size: 10px; font-family: var(--mono); padding: 1px 6px; border-radius: 3px;
+      border: 1px solid var(--border); background: var(--surface-3); color: var(--text-muted);
+    }
+    .er-chip.chip-exp-a { color: var(--blue);  border-color: var(--blue-dim);  background: var(--blue-dim); }
+    .er-chip.chip-exp-r { color: var(--amber); border-color: #5a3a00; background: #2d2000; }
+    .er-chip.chip-got-a { color: var(--green); border-color: #1a4a2e; background: var(--green-dim); }
+    .er-chip.chip-got-r { color: var(--amber); border-color: #5a3a00; background: #2d2000; }
+    .er-chip.chip-bad   { color: var(--red);   border-color: #6b2020; background: var(--red-dim); }
+    .er-chip.chip-cite  { color: var(--blue);  border-color: var(--blue-dim); }
+    .er-chip.chip-src-gate  { color: var(--amber); border-color: #5a3a00; background: #2d2000; }
+    .er-chip.chip-src-llm   { color: #bc8cff;      border-color: #3a1f5f; background: #1e0f33; }
+    .er-chip.chip-src-valid { color: var(--red);   border-color: #6b2020; background: var(--red-dim); }
+
+    .er-question {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 12px; color: var(--text); line-height: 1.45;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .er-answer {
+      font-size: 11px; color: var(--text-muted); line-height: 1.4; font-style: italic;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* Expanded pipeline content inside each eval row */
+    .er-expanded {
+      border-top: 1px solid var(--border);
+      padding: 12px 14px; background: var(--bg);
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       WEEK-SPECIFIC END
+       ══════════════════════════════════════════════════════════════ */
+  </style>
+</head>
+<body>
+
+<!-- CORE: Header -->
+<header>
+  <div class="header-title">
+    <div class="logo">🤖</div>
+    Applied GenAI & Agentic AI Engineering Course
+    <span class="week-badge">Week 5</span>
+    <span class="header-sub">- CitationRAG</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn-ghost" onclick="window.open('http://localhost:8000/readme','_blank')">📖 README</button>
+    <div id="health-chip" onclick="checkHealth()" title="Click to re-check">
+      <span class="dot"></span>
+      <span id="health-text">Checking…</span>
+    </div>
+  </div>
+</header>
+
+<!-- Main layout -->
+<main>
+
+  <!-- Left panel -->
+  <div class="left-panel">
+
+    <!-- CORE: Primary input (textarea, id="notes" stays) -->
+    <div class="panel-section" style="flex:1; display:flex; flex-direction:column;">
+      <div class="input-row">
+        <label style="margin:0">Your Question</label>
+        <button class="btn-demo" onclick="fillDemo()">↺ Fill Demo</button>
+      </div>
+      <textarea id="notes" placeholder="Ask a question about the Transformer / Attention paper…"></textarea>
+
+      <!-- WEEK-SPECIFIC: demo question pills -->
+      <div class="demo-pills">
+        <span class="demo-pill" onclick="setQ(this)">What is self-attention and how does it work?</span>
+        <span class="demo-pill" onclick="setQ(this)">How does multi-head attention work?</span>
+        <span class="demo-pill" onclick="setQ(this)">What is positional encodings?</span>
+        <span class="demo-pill" onclick="setQ(this)">What BLEU score did the Transformer achieve on English-to-German?</span>
+        <span class="demo-pill" onclick="setQ(this)">What optimizer was used to train the Transformer?</span>
+        <span class="demo-pill" onclick="setQ(this)">What is the lunchroom Wi-Fi password?</span>
+      </div>
+    </div>
+
+    <!-- WEEK-SPECIFIC: active thresholds display -->
+    <div class="panel-section">
+      <label>Active Thresholds</label>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div class="threshold-row">
+          <span class="t-label">Similarity threshold</span>
+          <span class="t-val" id="thr-sim">-</span>
+        </div>
+        <div class="threshold-row">
+          <span class="t-label">Spread delta</span>
+          <span class="t-val" id="thr-spd">-</span>
+        </div>
+        <div class="threshold-row">
+          <span class="t-label">Top-k chunks</span>
+          <span class="t-val" id="thr-k">-</span>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--text-muted);line-height:1.5">
+        Calibrated for text-embedding-3-large cosine scores.<br>
+        Gate uses dense top-1 score, not the RRF score.
+      </div>
+    </div>
+
+    <!-- CORE: Action buttons -->
+    <div class="action-btns">
+      <button class="btn-primary" id="btn-ask" onclick="doAsk()">
+        <span id="spin-ask" class="spinner"></span>
+        🔍 &nbsp;Ask CitationRAG
+      </button>
+      <button class="btn-secondary" id="btn-eval" onclick="doEval()">
+        <span id="spin-eval" class="spinner"></span>
+        📊 &nbsp;Run Full Eval
+      </button>
+      <button class="btn-ghost" onclick="clearOutput();clearLogs()">✕ &nbsp;Clear All</button>
+    </div>
+
+  </div>
+
+  <!-- Right panel (CORE - do not change structure) -->
+  <div class="right-panel">
+
+    <div class="pane pane-output">
+      <div class="pane-header">
+        Output
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="output-tag" style="font-size:11px;color:var(--text-muted)"></span>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px;display:none" id="btn-format" onclick="toggleFormat()">{ } Format</button>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearOutput()">✕ Clear</button>
+        </div>
+      </div>
+      <div class="pane-body" id="output-body">
+        <span class="placeholder-msg">Ask a question or run the eval to see results here…</span>
+      </div>
+    </div>
+
+    <div class="pane pane-logs">
+      <div class="pane-header">
+        Logs
+        <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearLogs()">✕ Clear</button>
+      </div>
+      <div class="pane-body" id="logs-body">
+        <span class="placeholder-msg">Request logs will appear here…</span>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  /* ══════════════════════════════════════════════════════════════════
+     CORE - DO NOT EDIT
+     ════════════════════════════════════════════════════════════════ */
+
+  const API = 'http://localhost:8000';
+  let _rawOutputText = '';
+  let _isFormatted   = false;
+
+  function _fmtDetail(detail, fallback) {
+    if (!detail) return fallback || 'Unknown error';
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail))
+      return detail.map(d => d.msg || JSON.stringify(d)).join(' | ');
+    return JSON.stringify(detail);
+  }
+
+  function _showFormatBtn(show) {
+    document.getElementById('btn-format').style.display = show ? '' : 'none';
+    _isFormatted = false;
+    document.getElementById('btn-format').textContent = '{ } Format';
+  }
+
+  function toggleFormat() {
+    const body = document.getElementById('output-body');
+    const btn  = document.getElementById('btn-format');
+    if (!_isFormatted) {
+      try {
+        body.innerHTML = `<pre>${highlightJSON(JSON.parse(_rawOutputText))}</pre>`;
+        _isFormatted = true; btn.textContent = '≡ Raw';
+        addLog('info', 'Output formatted as JSON.');
+      } catch { addLog('warn', 'Could not parse output as JSON.'); }
+    } else {
+      body.textContent = _rawOutputText;
+      _isFormatted = false; btn.textContent = '{ } Format';
+    }
+  }
+
+  async function checkHealth() {
+    const chip = document.getElementById('health-chip');
+    const txt  = document.getElementById('health-text');
+    chip.className = ''; txt.textContent = 'Checking…';
+    try {
+      const r    = await fetch(`${API}/health`);
+      const data = await r.json();
+      chip.className  = 'online';
+      txt.textContent = `Online · ${data.model}`;
+      MODEL_NAME = data.model;   // keep in sync for refusal tags
+      addLog('success', `Health OK - model: ${escHtml(data.model)}`);
+      // Populate threshold display from health (model only here; thresholds loaded separately)
+    } catch (e) {
+      chip.className  = 'offline';
+      txt.textContent = 'Offline';
+      addLog('error', `Health check failed - is the server running? (${e.message})`);
+    }
+  }
+
+  function clearOutput() {
+    document.getElementById('output-body').innerHTML =
+      '<span class="placeholder-msg">Ask a question or run the eval to see results here…</span>';
+    document.getElementById('output-tag').textContent = '';
+    _rawOutputText = ''; _showFormatBtn(false);
+  }
+
+  function clearLogs() {
+    document.getElementById('logs-body').innerHTML =
+      '<span class="placeholder-msg">Request logs will appear here…</span>';
+  }
+
+  function addLog(level, msg) {
+    const body = document.getElementById('logs-body');
+    const ph   = body.querySelector('.placeholder-msg');
+    if (ph) ph.remove();
+    const now = new Date().toLocaleTimeString('en-GB', {hour12: false});
+    const div = document.createElement('div');
+    div.className = `log-entry log-${level}`;
+    div.innerHTML =
+      `<span class="log-ts">${now}</span>` +
+      `<span class="log-level">${level.toUpperCase()}</span>` +
+      `<span class="log-msg">${escHtml(msg)}</span>`;
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function highlightJSON(obj) {
+    const str = JSON.stringify(obj, null, 2);
+    return escHtml(str).replace(
+      /(&quot;(?:\\u[0-9a-fA-F]{4}|\\[^u]|[^\\&])*&quot;(?:\s*:)?|\b(?:true|false)\b|\bnull\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      match => {
+        let c = 'n';
+        if (match.startsWith('&quot;'))
+          c = match.endsWith(':') ? 'k' : 's';
+        else if (match === 'true' || match === 'false') c = 'b';
+        else if (match === 'null') c = 'null';
+        return `<span class="j-${c}">${match}</span>`;
+      }
+    );
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function setLoading(active) {
+    document.querySelectorAll('.action-btns button').forEach(b => b.disabled = active);
+    document.querySelectorAll('.spinner').forEach(s => s.classList.toggle('active', active));
+  }
+
+  function fillDemo() {
+    document.getElementById('notes').value = DEMO_NOTES;
+    addLog('info', 'Demo input loaded.');
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     WEEK-SPECIFIC START
+     ════════════════════════════════════════════════════════════════ */
+
+  const DEMO_NOTES = 'What is self-attention and how does it work?';
+
+  // Populated on health check - used in refusal diagnostic tags
+  let MODEL_NAME = 'gpt-5.4-mini-2026-03-17';
+
+  // Set a pill question into the textarea
+  function setQ(el) {
+    document.getElementById('notes').value = el.textContent;
+    addLog('info', `Demo question loaded: "${escHtml(el.textContent)}"`);
+  }
+
+  // Populate threshold display by hitting /health (thresholds aren't
+  // in the health response - hard-code the .env.example defaults here
+  // so students can see them without having to read the config file).
+  function _loadThresholds() {
+    document.getElementById('thr-sim').textContent = SIM_THR;
+    document.getElementById('thr-spd').textContent = SPD_THR;
+    document.getElementById('thr-k').textContent   = '5';
+  }
+
+  // ── Render a /answer response - full pipeline trace ─────────────
+
+  const SIM_THR = 0.55, SPD_THR = 0.08;   // match config.py defaults
+
+  function _stepLabel(n, text) {
+    return `<div class="step-label"><span class="step-num">${n}</span>${escHtml(text)}</div>`;
+  }
+
+  function _highlightCiteMarkers(text) {
+    return escHtml(text).replace(
+      /\[doc#(\d+)\]/g,
+      '<span class="cite-marker">[doc#$1]</span>'
+    );
+  }
+
+  function _chunksHtml(chunks) {
+    if (!chunks || !chunks.length)
+      return '<div style="color:var(--text-muted);font-size:12px;padding:4px 0">No chunks retrieved.</div>';
+    return chunks.map(c => {
+      const preview = c.text.length > 130 ? c.text.slice(0, 130) + '…' : c.text;
+      return `
+        <details class="chunk-details">
+          <summary class="chunk-summary">
+            <span class="citation-id">${escHtml(c.chunk_id)}</span>
+            <span class="rc-score">rrf ${(c.score * 100).toFixed(0)}%</span>
+            <span class="chunk-preview">${escHtml(preview)}</span>
+            <span class="chunk-toggle"></span>
+          </summary>
+          <div class="chunk-full">${escHtml(c.text)}</div>
+        </details>`;
+    }).join('');
+  }
+
+  function _scoresHtml(data) {
+    const top = data.retrieval_top_score, spd = data.retrieval_spread;
+    const topOk = top != null && top >= SIM_THR;
+    const spdOk = spd != null && spd >= SPD_THR;
+    return `
+      <div class="scores-bar">
+        <div class="score-item ${top != null ? (topOk ? 's-green' : 's-amber') : ''}">
+          <div class="s-label">top score ≥${SIM_THR}</div>
+          <div class="s-val">${top != null ? top.toFixed(3) : '-'} ${top != null ? (topOk ? '✓' : '✗') : ''}</div>
+        </div>
+        <div class="score-item ${spd != null ? (spdOk ? 's-green' : 's-amber') : ''}">
+          <div class="s-label">spread ≥${SPD_THR}</div>
+          <div class="s-val">${spd != null ? spd.toFixed(3) : '-'} ${spd != null ? (spdOk ? '✓' : '✗') : ''}</div>
+        </div>
+        <div class="score-item ${data.validation_passed ? 's-green' : 's-red'}">
+          <div class="s-label">citation valid</div>
+          <div class="s-val">${data.validation_passed ? '✓ passed' : '✗ failed'}</div>
+        </div>
+        <div class="score-item ${data.refused ? 's-amber' : 's-green'}">
+          <div class="s-label">outcome</div>
+          <div class="s-val">${data.refused ? 'refused' : 'answered'}</div>
+        </div>
+      </div>`;
+  }
+
+  const _REFUSAL_SRC = {
+    threshold_gate: { cls: 'rtag-gate', label: 'Threshold gate - model never called' },
+    llm:            { cls: 'rtag-llm',  label: "LLM refused - context didn't cover this" },
+    validation:     { cls: 'rtag-valid',label: 'Validation failed - citation fabricated' },
+  };
+
+  // ── Core HTML builder - shared by single-query view AND each eval row ────
+  // Returns an HTML string for the full four-step pipeline view.
+  // _renderAnswer() is just a thin wrapper that sets innerHTML + updates state.
+
+  function _answerHTML(data, query) {
+    const chunks = data.retrieved_chunks || [];
+
+    // Step 4 - model output
+    let step4Body, step4Title;
+
+    if (data.refused) {
+      const src = _REFUSAL_SRC[data.refusal_source] || { cls: '', label: 'Refused' };
+      const modelTag = data.refusal_source !== 'threshold_gate'
+        ? `<span class="rtag">${escHtml(MODEL_NAME)}</span>` : '';
+      step4Title = data.refusal_source === 'threshold_gate'
+        ? 'Model Output · skipped (gate fired before LLM call)'
+        : `Model Output · ${MODEL_NAME}`;
+
+      // Raw model output panel - only for validation failures
+      let rawPanel = '';
+      if (data.refusal_source === 'validation' && data.raw_model_answer) {
+        const rawCitCards = (data.raw_model_citations || []).map(c => `
+          <div class="raw-citation">
+            <div class="raw-citation-header">
+              <span class="citation-id">${escHtml(c.chunk_id)}</span>
+              <span class="badge-fail">✗ failed validation</span>
+            </div>
+            <div class="raw-quote">"${escHtml(c.supporting_quote)}"</div>
+          </div>`).join('');
+
+        rawPanel = `
+          <div class="raw-model-block">
+            <div class="raw-model-label">🔍 What the model actually generated</div>
+            ${data.validation_detail ? `<div class="fail-detail">⚠ ${escHtml(data.validation_detail)}</div>` : ''}
+            <div class="raw-answer-text">${_highlightCiteMarkers(data.raw_model_answer)}</div>
+            ${rawCitCards}
+          </div>`;
+      }
+
+      step4Body = `
+        <div class="refused-box">
+          <div class="refused-top">
+            <div class="refused-icon">⚠️</div>
+            <div class="refused-msg">${escHtml(data.answer)}</div>
+          </div>
+          <div class="refused-tags">
+            <span class="rtag ${src.cls}">${escHtml(src.label)}</span>
+            ${modelTag}
+          </div>
+        </div>
+        ${rawPanel}`;
+    } else {
+      const citCards = (data.citations || []).map(c => `
+        <div class="citation-card">
+          <div class="citation-header">
+            <span class="citation-id">${escHtml(c.chunk_id)}</span>
+            <span class="${data.validation_passed ? 'badge-valid' : 'badge-invalid'}">
+              ${data.validation_passed ? '✓ validated' : '✗ failed'}
+            </span>
+          </div>
+          <blockquote class="citation-quote">${escHtml(c.supporting_quote)}</blockquote>
+        </div>`).join('');
+
+      step4Title = `Answer · ${MODEL_NAME}`;
+      step4Body = `
+        <div class="answer-box">${_highlightCiteMarkers(data.answer)}</div>
+        ${citCards ? `<div style="margin-top:8px">${citCards}</div>` : ''}`;
+    }
+
+    return `
+      <div class="step-block">
+        ${_stepLabel(1, 'Query')}
+        <div class="query-display">${escHtml(query || '')}</div>
+      </div>
+      <div class="step-block">
+        ${_stepLabel(2, `Retrieved Chunks (${chunks.length}) · sent to model`)}
+        ${_chunksHtml(chunks)}
+      </div>
+      <div class="step-block">
+        ${_stepLabel(3, 'Pipeline · Threshold Gate &amp; Citation Validation')}
+        ${_scoresHtml(data)}
+      </div>
+      <div class="step-block">
+        ${_stepLabel(4, step4Title)}
+        ${step4Body}
+      </div>`;
+  }
+
+  function _renderAnswer(data, body, query) {
+    _rawOutputText = JSON.stringify(data, null, 2);
+    _showFormatBtn(true);
+    body.innerHTML = _answerHTML(data, query);
+  }
+
+  // ── Render a /eval response ──────────────────────────────────────
+
+  function _renderEval(data, body) {
+    _rawOutputText = JSON.stringify(data, null, 2);
+    _showFormatBtn(true);
+
+    // ── Metric cards ─────────────────────────────────────────────
+    const metrics = [
+      { key: 'groundedness',       label: 'Groundedness',       icon: '🎯', higher: true  },
+      { key: 'citation_validity',  label: 'Cit Validity',       icon: '📍', higher: true  },
+      { key: 'citation_recall',    label: 'Cit Recall',         icon: '📚', higher: true  },
+      { key: 'false_answer_rate',  label: 'False Answer',       icon: '⚠️', higher: false },
+      { key: 'false_refusal_rate', label: 'False Refusal',      icon: '🚫', higher: false },
+    ];
+    const cards = metrics.map(m => {
+      const val = data[m.key] || 0;
+      const pct = (val * 100).toFixed(1);
+      const good = m.higher ? val >= 0.75 : val < 0.15;
+      return `<div class="metric-card ${good ? 'mc-good' : 'mc-warn'}">
+        <div class="mc-icon">${m.icon}</div>
+        <div class="mc-val">${pct}%</div>
+        <div class="mc-label">${escHtml(m.label)}</div>
+      </div>`;
+    }).join('');
+
+    // ── Per-row breakdown ─────────────────────────────────────────
+    const rows = data.rows || [];
+
+    const SRC_CHIP = {
+      threshold_gate: { cls: 'chip-src-gate',  label: 'gate: score/spread' },
+      llm:            { cls: 'chip-src-llm',   label: 'llm refused' },
+      validation:     { cls: 'chip-src-valid', label: 'citation invalid' },
+    };
+
+    const rowCards = rows.map((r, i) => {
+      const expChip = r.expected === 'answer'
+        ? `<span class="er-chip chip-exp-a">expect: answer</span>`
+        : `<span class="er-chip chip-exp-r">expect: refuse</span>`;
+      const gotChip = r.actual === 'answered'
+        ? `<span class="er-chip chip-got-a">got: answered</span>`
+        : `<span class="er-chip chip-got-r">got: refused</span>`;
+
+      let failChips = '';
+      if (r.false_answer)  failChips += `<span class="er-chip chip-bad">false answer</span>`;
+      if (r.false_refusal) failChips += `<span class="er-chip chip-bad">false refusal</span>`;
+      if (!r.grounded && !r.false_refusal && !r.false_answer)
+                           failChips += `<span class="er-chip chip-bad">not grounded</span>`;
+      if (!r.cit_recall_ok && r.actual === 'answered')
+                           failChips += `<span class="er-chip chip-bad">no citation</span>`;
+      if (r.refusal_source) {
+        const sc = SRC_CHIP[r.refusal_source] || { cls: '', label: r.refusal_source };
+        failChips += `<span class="er-chip ${sc.cls}">${escHtml(sc.label)}</span>`;
+      }
+
+      const citeChips = (r.cited_ids || []).map(id =>
+        `<span class="er-chip chip-cite">${escHtml(id)}</span>`).join('');
+
+      // Expanded pipeline - uses _answerHTML with the full embedded response
+      const expandedHtml = r.response
+        ? _answerHTML(r.response, r.question)
+        : `<div style="color:var(--text-muted);font-size:12px">Full response not available.</div>`;
+
+      return `
+        <details class="eval-row ${r.passed ? 'er-pass' : 'er-fail'}">
+          <summary class="er-summary">
+            <div class="er-top">
+              <span class="er-num">#${i + 1}</span>
+              <span class="er-badge ${r.passed ? 'er-pass-badge' : 'er-fail-badge'}">${r.passed ? '✓ PASS' : '✗ FAIL'}</span>
+              <div class="er-chips">${expChip}${gotChip}${failChips}${citeChips}</div>
+              <span class="er-toggle"></span>
+            </div>
+            <div class="er-question">${escHtml(r.question)}</div>
+            <div class="er-answer">${escHtml(r.system_answer)}</div>
+          </summary>
+          <div class="er-expanded">${expandedHtml}</div>
+        </details>`;
+    }).join('');
+
+    body.innerHTML = `
+      <div class="eval-header">📊 Eval Results - ${data.rows_scored} rows scored</div>
+      <div class="metrics-grid">${cards}</div>
+      <div class="eval-rows-label">Row by row</div>
+      ${rowCards}`;
+  }
+
+  // ── Action: Ask CitationRAG (POST /answer) ───────────────────────
+
+  async function doAsk() {
+    const question = document.getElementById('notes').value.trim();
+    if (!question) { addLog('warn', 'Enter a question first.'); return; }
+
+    clearOutput(); setLoading(true);
+    document.getElementById('output-tag').textContent = 'POST /answer';
+    addLog('info', `POST /answer - "${escHtml(question.slice(0, 60))}${question.length > 60 ? '…' : ''}"`);
+
+    const body = document.getElementById('output-body');
+    body.innerHTML = '<span class="placeholder-msg">Retrieving and generating…</span>';
+
+    try {
+      const r    = await fetch(`${API}/answer`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ question }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+
+      _renderAnswer(data, body, question);
+
+      if (data.refused) {
+        addLog('warn', `Refused - top=${data.retrieval_top_score?.toFixed(3) ?? '-'}  spread=${data.retrieval_spread?.toFixed(3) ?? '-'}`);
+      } else {
+        addLog('success',
+          `Answered - ${data.citations?.length ?? 0} citation(s) - ` +
+          `validation=${data.validation_passed ? 'passed' : 'FAILED'} - ` +
+          `top=${data.retrieval_top_score?.toFixed(3) ?? '-'}`);
+      }
+    } catch (e) {
+      body.innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally { setLoading(false); }
+  }
+
+  // ── Action: Run Full Eval (POST /eval) ───────────────────────────
+
+  async function doEval() {
+    clearOutput(); setLoading(true);
+    document.getElementById('output-tag').textContent = 'POST /eval';
+    addLog('info', 'POST /eval - running golden dataset through /answer…');
+
+    const body = document.getElementById('output-body');
+    body.innerHTML = '<span class="placeholder-msg">Running eval across all golden rows… (this may take 10-30 s)</span>';
+
+    try {
+      const r    = await fetch(`${API}/eval`, { method: 'POST' });
+      const data = await r.json();
+      if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+
+      _renderEval(data, body);
+      addLog('success',
+        `Eval done - ${data.rows_scored} rows - ` +
+        `groundedness=${(data.groundedness * 100).toFixed(1)}% - ` +
+        `false_answer=${(data.false_answer_rate * 100).toFixed(1)}%`);
+    } catch (e) {
+      body.innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally { setLoading(false); }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     CORE: Init
+     ════════════════════════════════════════════════════════════════ */
+  checkHealth();
+  _loadThresholds();
+</script>
+</body>
+</html>

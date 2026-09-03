@@ -1,0 +1,92 @@
+[
+  {
+    "question": "What are the three values that the attention function maps to an output, and what form does the output take?",
+    "expected_answer": "The attention function maps a query and a set of key-value pairs to an output. The output is computed as a weighted sum of the values, where the weight assigned to each value is computed by a compatibility function of the query with the corresponding key.",
+    "must_cite": [
+      "_answered"
+    ],
+    "_source_chunk_id": "hand-authored-r1",
+    "_source_chunk_type": "prose",
+    "_source_page": 3
+  },
+  {
+    "question": "How does the Transformer change the number of operations needed to relate two arbitrary positions compared with convolution-based models like ConvS2S and ByteNet?",
+    "expected_answer": "In the Transformer, the number of operations needed to connect two positions is reduced to a constant number. By contrast, it grows with distance in convolution-based models: linearly in ConvS2S and logarithmically in ByteNet.",
+    "must_cite": [
+      "_answered"
+    ],
+    "_source_chunk_id": "b1ba5d0ce6b0ba51",
+    "_source_chunk_type": "prose",
+    "_source_page": 2
+  },
+  {
+    "question": "How does the decoder prevent a position from using information from later positions when making predictions?",
+    "expected_answer": "The decoder masks its self-attention so positions cannot attend to subsequent positions. Together with shifting the output embeddings by one position, this ensures that the prediction at position i depends only on earlier known outputs.",
+    "must_cite": [
+      "_answered"
+    ],
+    "_source_chunk_id": "9d384120c163ece0",
+    "_source_chunk_type": "prose",
+    "_source_page": 3
+  },
+  {
+    "question": "What does multi-head attention allow a model to do that a single attention head does not?",
+    "expected_answer": "Multi-head attention lets the model attend jointly to information from different representation subspaces at different positions. In contrast, using only a single attention head causes averaging, which inhibits this ability.",
+    "must_cite": [
+      "_answered"
+    ],
+    "_source_chunk_id": "fe5f660af3493b8d",
+    "_source_chunk_type": "prose",
+    "_source_page": 5
+  },
+  {
+    "question": "What quantities are defined in the table caption for comparing different layer types?",
+    "expected_answer": "The table compares maximum path lengths, per-layer complexity, and the minimum number of sequential operations for different layer types. It also defines n as the sequence length, d as the representation dimension, k as the convolution kernel size, and r as the neighborhood size in restricted self-attention.",
+    "must_cite": [
+      "_answered"
+    ],
+    "_source_chunk_id": "242600d86983544a",
+    "_source_chunk_type": "prose",
+    "_source_page": 6
+  },
+  {
+    "question": "How does the sequential computational complexity of a self-attention layer compare with that of a recurrent layer?",
+    "expected_answer": "A self-attention layer connects all positions using a constant number of sequentially executed operations, while a recurrent layer requires O(n) sequential operations. This means self-attention is faster than recurrent layers in terms of sequential computation.",
+    "must_cite": [
+      "_answered"
+    ],
+    "_source_chunk_id": "48af9df7657cec55",
+    "_source_chunk_type": "prose",
+    "_source_page": 6
+  },
+  {
+    "question": "What value of label smoothing was used during training, and what effect did it have on performance metrics?",
+    "expected_answer": "The training used label smoothing with a value of 0.1. It worsened perplexity because the model became less certain, but it improved accuracy and BLEU score.",
+    "must_cite": [
+      "_answered"
+    ],
+    "_source_chunk_id": "5ffb293d7f0afb0a",
+    "_source_chunk_type": "prose",
+    "_source_page": 8
+  },
+  {
+    "question": "Which hyperparameters were tuned on the Section 22 development set, and what stayed the same during those experiments?",
+    "expected_answer": "They tuned the dropout for both attention and residual connections, the learning rates, and the beam size on the Section 22 development set. All other parameters were kept unchanged from the English-to-German base translation model.",
+    "must_cite": [
+      "_answered"
+    ],
+    "_source_chunk_id": "7b764281b1d8ea06",
+    "_source_chunk_type": "prose",
+    "_source_page": 9
+  },
+  {
+    "question": "What is the current stock price of NVIDIA?",
+    "expected_answer": "I don't have that information in the provided sources.",
+    "must_cite": []
+  },
+  {
+    "question": "What is the lunchroom Wi-Fi password?",
+    "expected_answer": "I don't have that information in the provided sources.",
+    "must_cite": []
+  }
+]
