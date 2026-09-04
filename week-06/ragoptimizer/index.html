@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<!--
+  Applied GenAI & Agentic AI Engineering Course
+  RAGOptimizer · Week 6
+  ================================================
+  Based on _templates/index.template.html
+
+  Intentional deviations from the template (documented, not force-fit):
+    1. id="notes" textarea labelled "Query" - RAG query input, not release notes
+    2. No provider selector - gpt-5.4-mini and gpt-5.4-nano are wired internally;
+       nano is the HyDE probe model only, not a user-facing choice
+    3. No SSE streaming - /ask returns full JSON; the pipeline (HyDE + rerank +
+       compress) does not produce token-by-token output
+    4. "Run Eval" secondary button replaces "Check Config" - runs all golden
+       dataset queries through the live pipeline and shows per-row pipeline traces
+    5. Pipeline status chips (HyDE / Reranker / Compressor) auto-loaded from
+       /config on startup so students see the active configuration at a glance
+    6. Left panel has overflow-y:auto - 3 panel-section blocks push it past
+       available height on smaller screens
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Applied GenAI & Agentic AI Engineering Course Week 6</title>
+  <style>
+    /* ══════════════════════════════════════════════════════════════
+       CORE - DO NOT EDIT (shared across all weeks)
+       ══════════════════════════════════════════════════════════════ */
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0d1117;
+      --surface:     #161b22;
+      --surface-2:   #21262d;
+      --surface-3:   #2d333b;
+      --border:      #30363d;
+      --text:        #e6edf3;
+      --text-muted:  #7d8590;
+      --blue:        #58a6ff;
+      --blue-dim:    #1f3a5f;
+      --green:       #3fb950;
+      --green-dim:   #1a3a28;
+      --red:         #f85149;
+      --red-dim:     #3d1a1a;
+      --orange:      #d29922;
+      --radius:      8px;
+      --mono:        'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; height: 52px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 15px; font-weight: 600; color: var(--text);
+    }
+    .header-title .logo {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #1a56db, #7e3af2);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+    }
+    .week-badge {
+      background: var(--blue-dim); color: var(--blue);
+      font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 20px;
+      border: 1px solid #1f4080;
+    }
+    .header-sub { color: var(--text-muted); font-weight: 400; }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+
+    button {
+      cursor: pointer; border: none; border-radius: var(--radius);
+      font-size: 13px; font-weight: 500;
+      transition: opacity 0.15s, transform 0.1s;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .btn-ghost {
+      background: transparent; color: var(--text-muted);
+      border: 1px solid var(--border); padding: 6px 12px;
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+
+    .btn-primary { background: #1a56db; color: #fff; padding: 8px 16px; }
+    .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+
+    .btn-secondary {
+      background: var(--surface-2); color: var(--text);
+      border: 1px solid var(--border); padding: 8px 16px;
+    }
+    .btn-secondary:hover:not(:disabled) { background: var(--surface-3); }
+
+    .btn-demo {
+      background: transparent; color: var(--blue);
+      border: 1px solid var(--blue-dim); padding: 5px 12px; font-size: 12px;
+    }
+    .btn-demo:hover:not(:disabled) { background: var(--blue-dim); }
+
+    #health-chip {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px;
+      font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text-muted);
+    }
+    #health-chip:hover { background: var(--surface-3); }
+    #health-chip.online  { color: var(--green); border-color: #1a4a2e; }
+    #health-chip.offline { color: var(--red);   border-color: #4a1a1a; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+    .online  .dot { background: var(--green); box-shadow: 0 0 6px #3fb95088; animation: pulse 2s infinite; }
+    .offline .dot { background: var(--red); }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    main {
+      display: grid; grid-template-columns: 380px 1fr;
+      flex: 1; overflow: hidden;
+    }
+
+    .left-panel {
+      display: flex; flex-direction: column;
+      border-right: 1px solid var(--border); overflow: hidden;
+    }
+
+    .panel-section { padding: 16px; border-bottom: 1px solid var(--border); }
+    .panel-section:last-child { border-bottom: none; }
+
+    label {
+      display: block; font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); margin-bottom: 8px;
+    }
+
+    textarea, input[type="text"], select {
+      width: 100%; background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text); font-size: 13px; font-family: inherit;
+      outline: none; transition: border-color 0.15s;
+    }
+    textarea { resize: none; }
+    textarea:focus, input:focus, select:focus {
+      border-color: var(--blue); box-shadow: 0 0 0 3px #1a56db22;
+    }
+
+    #notes {
+      flex: 1; min-height: 0; height: 0;
+      padding: 10px 12px; line-height: 1.6;
+    }
+
+    .input-row {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 8px;
+    }
+
+    .action-btns { display: flex; flex-direction: column; gap: 8px; padding: 16px; }
+    .action-btns button { width: 100%; justify-content: center; }
+
+    .right-panel { display: flex; flex-direction: column; overflow: hidden; }
+
+    .pane { display: flex; flex-direction: column; overflow: hidden; }
+    .pane-output { flex: 1; border-bottom: 1px solid var(--border); }
+    .pane-logs   { height: 200px; flex-shrink: 0; }
+
+    .pane-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); flex-shrink: 0;
+    }
+
+    .pane-body {
+      flex: 1; overflow-y: auto; padding: 16px;
+      font-family: var(--mono); font-size: 13px; line-height: 1.6;
+    }
+    .pane-body::-webkit-scrollbar { width: 6px; }
+    .pane-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .placeholder-msg { color: var(--text-muted); font-family: inherit; font-size: 13px; font-style: italic; }
+
+    .j-k    { color: #79c0ff; }
+    .j-s    { color: #a5d6ff; }
+    .j-n    { color: #ffa657; }
+    .j-b    { color: #7ee787; }
+    .j-null { color: var(--text-muted); }
+
+    .log-entry { display: flex; gap: 10px; padding: 2px 0; font-size: 12px; line-height: 1.5; }
+    .log-ts    { color: var(--text-muted); flex-shrink: 0; }
+    .log-level { font-weight: 700; flex-shrink: 0; width: 50px; }
+    .log-msg   { color: var(--text); word-break: break-word; }
+    .log-info    .log-level { color: var(--blue); }
+    .log-success .log-level { color: var(--green); }
+    .log-warn    .log-level { color: var(--orange); }
+    .log-error   .log-level { color: var(--red); }
+
+    .spinner {
+      display: none; width: 14px; height: 14px;
+      border: 2px solid var(--border); border-top-color: var(--blue);
+      border-radius: 50%; animation: spin 0.6s linear infinite; flex-shrink: 0;
+    }
+    .spinner.active { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: var(--red-dim); border: 1px solid #6b2020;
+      border-radius: var(--radius); padding: 12px;
+      color: var(--red); font-family: var(--mono); font-size: 12px; white-space: pre-wrap;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       WEEK-SPECIFIC START
+       ══════════════════════════════════════════════════════════════ */
+
+    /* Left panel scrolls - 3 panel-section blocks */
+    .left-panel { overflow-y: auto; }
+
+    /* Demo pills - quick-fill query buttons */
+    .demo-pills {
+      display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
+    }
+    .pill {
+      font-size: 11px; padding: 4px 10px;
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 20px; color: var(--text-muted); cursor: pointer;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .pill:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-dim); }
+
+    /* Pipeline status chips */
+    .pipeline-row {
+      display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .stage-chip {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 10px; border-radius: 20px;
+      border: 1px solid var(--border); font-size: 11px;
+      background: var(--surface-2);
+    }
+    .stage-chip.stage-on  { border-color: #1a4a2e; background: var(--green-dim); }
+    .stage-chip.stage-off { border-color: #4a1a1a; background: var(--red-dim); opacity: 0.7; }
+    .stage-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--text-muted); flex-shrink: 0;
+    }
+    .stage-chip.stage-on  .stage-dot { background: var(--green); }
+    .stage-chip.stage-off .stage-dot { background: var(--red); }
+    .stage-label  { font-weight: 700; color: var(--text); font-family: var(--mono); }
+    .stage-detail { color: var(--text-muted); font-size: 10px; }
+
+    /* Answer card */
+    .answer-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px;
+      font-family: inherit;
+    }
+    .answer-meta {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;
+    }
+    .conf-badge, .fallback-badge {
+      font-size: 10px; font-weight: 700; padding: 2px 8px;
+      border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .fallback-badge {
+      background: #3a2a00; color: var(--orange); border: 1px solid #5a3a00;
+    }
+    .answer-text { color: var(--text); font-size: 13px; line-height: 1.65; }
+
+    /* Citations block */
+    .cit-block  { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+    .cit-label  { font-size: 10px; font-weight: 700; text-transform: uppercase;
+                  letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 6px; }
+    .cit-row    { display: flex; gap: 8px; align-items: baseline; padding: 3px 0;
+                  border-bottom: 1px solid var(--border); font-size: 12px; }
+    .cit-row:last-child { border-bottom: none; }
+    .cit-id     { font-family: var(--mono); font-size: 10px; color: var(--blue);
+                  flex-shrink: 0; white-space: nowrap; }
+    .cit-quote  { color: var(--text-muted); font-style: italic; line-height: 1.5; }
+
+    /* Pipeline trace panel */
+    .trace-panel { margin-top: 10px; border: 1px solid var(--border); border-radius: var(--radius);
+                   background: var(--surface); font-family: inherit; }
+    .trace-panel > summary {
+      padding: 8px 14px; font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--blue); cursor: pointer; user-select: none;
+      list-style: none; display: flex; align-items: center; gap: 6px;
+    }
+    .trace-panel > summary::before { content: '▶'; font-size: 9px; color: var(--text-muted); }
+    .trace-panel[open] > summary::before { content: '▼'; }
+    .trace-panel > summary::-webkit-details-marker { display: none; }
+
+    .trace-body { padding: 0 14px 12px; }
+
+    .trace-section { margin-top: 12px; }
+    .trace-section-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; color: var(--text-muted); margin-bottom: 6px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .trace-model-tag {
+      font-size: 9px; font-weight: 600; padding: 1px 6px; border-radius: 10px;
+      background: var(--blue-dim); color: var(--blue); border: 1px solid #1f4080;
+      text-transform: none; letter-spacing: 0;
+    }
+
+    .trace-hyde-text {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 8px 12px;
+      font-size: 12px; line-height: 1.6; color: var(--text); font-style: italic;
+    }
+    .trace-stat { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+    .trace-stats-row {
+      display: flex; gap: 12px; align-items: center;
+      font-size: 12px; color: var(--text-muted); flex-wrap: wrap;
+    }
+    .trace-stats-row b { color: var(--text); }
+    .trace-stat-sep { color: var(--border); }
+
+    .trace-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 4px; }
+    .trace-table th {
+      text-align: left; padding: 4px 6px; color: var(--text-muted);
+      border-bottom: 1px solid var(--border); font-weight: 600; white-space: nowrap;
+    }
+    .trace-table td {
+      padding: 4px 6px; border-bottom: 1px solid #21262d; vertical-align: top;
+    }
+    .trace-table tr:last-child td { border-bottom: none; }
+    .trace-rank    { color: var(--text-muted); width: 28px; }
+    .trace-cid-cell { font-family: var(--mono); color: var(--blue); white-space: nowrap; width: 160px; }
+    .trace-preview { color: var(--text-muted); font-size: 11px; max-width: 280px; }
+    .trace-score-v { color: var(--text-muted); text-align: right; white-space: nowrap; }
+    .trace-score-r { color: var(--orange); text-align: right; white-space: nowrap; font-weight: 600; }
+    .trace-arrow   { width: 16px; text-align: center; }
+    .arrow-up   { color: var(--green); }
+    .arrow-down { color: var(--red); }
+    .arrow-same { color: var(--text-muted); }
+    .trace-final-row {
+      display: flex; gap: 8px; align-items: baseline;
+      padding: 3px 0; border-bottom: 1px solid #21262d; font-size: 12px;
+    }
+    .trace-final-row:last-child { border-bottom: none; }
+    .trace-final-num { color: var(--text-muted); width: 20px; flex-shrink: 0; font-size: 11px; }
+
+    /* Config grid */
+    .config-grid { display: flex; flex-direction: column; gap: 4px; }
+    .config-row {
+      display: flex; justify-content: space-between; align-items: baseline;
+      padding: 4px 0; border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+    .config-row:last-child { border-bottom: none; }
+    .config-key { color: var(--text-muted); }
+    .config-val { font-family: var(--mono); color: var(--blue); font-size: 11px; }
+    .config-val.true-val  { color: var(--green); }
+    .config-val.false-val { color: var(--red); }
+
+    /* 503 notice box */
+    .notice-box {
+      background: #1f2d3d; border: 1px solid var(--blue-dim);
+      border-radius: var(--radius); padding: 12px 14px; margin-top: 10px;
+      font-family: inherit; font-size: 12px; color: #a5d6ff; line-height: 1.6;
+    }
+    .notice-box strong { color: var(--blue); }
+
+    /* ── Eval metric cards ─────────────────────────────────────── */
+    .eval-header { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+    .metrics-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 8px; margin-bottom: 16px;
+    }
+    .metric-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 8px; text-align: center;
+    }
+    .metric-card.mc-good { border-color: #1a4a2e; background: #0d1f16; }
+    .metric-card.mc-warn { border-color: #5a3a00; background: #1a1000; }
+    .mc-icon  { font-size: 16px; margin-bottom: 4px; }
+    .mc-val   { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--text); }
+    .mc-good .mc-val { color: var(--green); }
+    .mc-warn .mc-val { color: var(--orange); }
+    .mc-label { font-size: 10px; color: var(--text-muted); margin-top: 3px;
+                text-transform: uppercase; letter-spacing: 0.04em; }
+
+    /* ── Eval per-row breakdown ────────────────────────────────── */
+    .eval-rows-label {
+      font-size: 10px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.07em; color: var(--text-muted);
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    }
+    .eval-rows-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+    .eval-row {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); margin-bottom: 5px; overflow: hidden;
+    }
+    .eval-row.er-pass { border-left: 3px solid var(--green); }
+    .eval-row.er-fail { border-left: 3px solid var(--red); }
+
+    .er-summary {
+      display: flex; flex-direction: column; gap: 3px;
+      padding: 7px 12px; cursor: pointer; user-select: none; list-style: none;
+    }
+    .er-summary::-webkit-details-marker { display: none; }
+    .er-summary::marker { display: none; }
+    .er-summary:hover { background: var(--surface-3); }
+
+    .er-top   { display: flex; align-items: center; gap: 7px; }
+    .er-num   { font-family: var(--mono); font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
+    .er-badge { font-size: 10px; font-weight: 800; padding: 1px 7px;
+                border-radius: 3px; flex-shrink: 0; }
+    .er-pass-badge { background: var(--green-dim); color: var(--green); }
+    .er-fail-badge { background: var(--red-dim);   color: var(--red); }
+    .er-toggle {
+      font-size: 10px; font-family: var(--mono); color: var(--blue); flex-shrink: 0;
+      background: var(--blue-dim); border: 1px solid #1f4080;
+      border-radius: 3px; padding: 1px 6px; margin-left: auto;
+    }
+    .eval-row[open] .er-toggle::before { content: '▾ collapse'; }
+    .er-toggle::before { content: '▸ expand'; }
+
+    .er-chips { display: flex; gap: 5px; flex-wrap: wrap; }
+    .er-chip  {
+      font-size: 10px; font-family: var(--mono); padding: 1px 6px; border-radius: 3px;
+      border: 1px solid var(--border); background: var(--surface-3); color: var(--text-muted);
+    }
+    .er-chip.chip-exp-a  { color: var(--blue);   border-color: var(--blue-dim);  background: var(--blue-dim); }
+    .er-chip.chip-exp-r  { color: var(--orange); border-color: #5a3a00; background: #2d2000; }
+    .er-chip.chip-got-a  { color: var(--green);  border-color: #1a4a2e; background: var(--green-dim); }
+    .er-chip.chip-got-r  { color: var(--orange); border-color: #5a3a00; background: #2d2000; }
+    .er-chip.chip-bad    { color: var(--red);    border-color: #6b2020; background: var(--red-dim); }
+    .er-chip.chip-cite   { color: var(--blue);   border-color: var(--blue-dim); }
+    .er-chip.chip-conf-h { color: var(--green);  border-color: #1a4a2e; background: var(--green-dim); }
+    .er-chip.chip-conf-m { color: var(--orange); border-color: #5a3a00; background: #2d2000; }
+    .er-chip.chip-conf-l { color: var(--text-muted); }
+
+    .er-question {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 12px; color: var(--text); line-height: 1.45;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .er-answer {
+      font-size: 11px; color: var(--text-muted); line-height: 1.4; font-style: italic;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    /* Expanded content inside each eval row */
+    .er-expanded {
+      border-top: 1px solid var(--border);
+      padding: 12px 14px; background: var(--bg);
+    }
+
+    /* ── Before/after delta table ─────────────────────────────────── */
+    .compare-header { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
+    .compare-subtitle {
+      font-size: 11px; color: var(--text-muted); font-weight: 400;
+      margin-top: 2px; margin-bottom: 14px; line-height: 1.5;
+    }
+
+    .delta-table { width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 12px; }
+    .delta-table th {
+      text-align: left; padding: 6px 10px; font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted);
+      border-bottom: 2px solid var(--border); background: var(--surface);
+    }
+    .delta-table th.col-b  { text-align: right; color: var(--orange); }
+    .delta-table th.col-f  { text-align: right; color: var(--blue); }
+    .delta-table th.col-d  { text-align: right; }
+    .delta-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+    .delta-table tr:last-child td { border-bottom: none; }
+    .delta-table .metric-name { color: var(--text); font-weight: 500; }
+    .delta-table .col-b { text-align: right; font-family: var(--mono); color: var(--orange); }
+    .delta-table .col-f { text-align: right; font-family: var(--mono); color: var(--blue); }
+    .delta-table .col-d { text-align: right; font-family: var(--mono); font-weight: 700; }
+    .delta-up   { color: var(--green); }
+    .delta-down { color: var(--red); }
+    .delta-same { color: var(--text-muted); }
+
+    /* Pipeline column header labels */
+    .pipeline-tag-b {
+      display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px;
+      border-radius: 10px; background: #2d1f00; border: 1px solid #5a3a00;
+      color: var(--orange); letter-spacing: 0; text-transform: none; margin-left: 4px;
+    }
+    .pipeline-tag-f {
+      display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px;
+      border-radius: 10px; background: var(--blue-dim); border: 1px solid #1f4080;
+      color: var(--blue); letter-spacing: 0; text-transform: none; margin-left: 4px;
+    }
+
+    /* ── Compare per-row chips ────────────────────────────────────── */
+    .er-chip.chip-b-pass { color: var(--orange); border-color: #5a3a00; background: #2d1f00; }
+    .er-chip.chip-b-fail { color: var(--red);    border-color: #6b2020; background: var(--red-dim); }
+    .er-chip.chip-f-pass { color: var(--blue);   border-color: var(--blue-dim); background: var(--blue-dim); }
+    .er-chip.chip-f-fail { color: var(--red);    border-color: #6b2020; background: var(--red-dim); }
+    .er-chip.chip-improved  { color: var(--green); border-color: #1a4a2e; background: var(--green-dim); }
+    .er-chip.chip-regressed { color: var(--red);   border-color: #6b2020; background: var(--red-dim); }
+    .er-chip.chip-same      { color: var(--text-muted); }
+
+    /* Side-by-side answer cards */
+    .compare-answers {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;
+    }
+    .compare-answers .answer-card { margin-bottom: 0; }
+    .pipeline-col-label {
+      font-size: 10px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.06em; margin-bottom: 6px;
+      display: flex; align-items: center; gap: 6px;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       WEEK-SPECIFIC END
+       ══════════════════════════════════════════════════════════════ */
+  </style>
+</head>
+<body>
+
+<!-- ── CORE: Header ─────────────────────────────────────────────── -->
+<header>
+  <div class="header-title">
+    <div class="logo">🤖</div>
+    Applied GenAI & Agentic AI Engineering Course
+    <span class="week-badge">Week 6</span>
+    <span class="header-sub">- RAGOptimizer</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn-ghost" onclick="window.open('http://localhost:8000/readme','_blank')">📖 README</button>
+    <div id="health-chip" onclick="checkHealth()" title="Click to re-check">
+      <span class="dot"></span>
+      <span id="health-text">Checking…</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main layout ─────────────────────────────────────────────── -->
+<main>
+
+  <!-- Left panel -->
+  <div class="left-panel">
+
+    <!-- CORE: Primary input - id="notes" stays; label renamed to Query -->
+    <div class="panel-section" style="flex:1; display:flex; flex-direction:column;">
+      <div class="input-row">
+        <label style="margin:0">Query</label>
+        <button class="btn-demo" onclick="fillDemo()">↺ Fill Demo</button>
+      </div>
+      <textarea id="notes" placeholder="Ask something about your documents…&#10;e.g. how do I rotate the JWT signing key?"></textarea>
+
+      <!-- WEEK-SPECIFIC: demo pills - "Attention is All You Need" paper -->
+      <div class="demo-pills" style="margin-top:8px">
+        <span class="pill" onclick="fillQuery('what is scaled dot-product attention')">scaled dot-product attention</span>
+        <span class="pill" onclick="fillQuery('how does multi-head attention work')">multi-head attention</span>
+        <span class="pill" onclick="fillQuery('explain positional encoding in transformers')">positional encoding</span>
+        <span class="pill" onclick="fillQuery('what is the encoder decoder architecture')">encoder-decoder</span>
+      </div>
+    </div>
+
+    <!-- WEEK-SPECIFIC: Pipeline status - auto-loaded from /config -->
+    <div class="panel-section">
+      <label>Pipeline</label>
+      <div class="pipeline-row" id="pipeline-status">
+        <span style="font-size:12px; color:var(--text-muted); font-style:italic">Loading…</span>
+      </div>
+      <div style="margin-top:8px; font-size:11px; color:var(--text-muted)">
+        HyDE probe: <span id="hyde-model-label" style="font-family:var(--mono); color:var(--blue)">-</span>
+        &nbsp;·&nbsp;
+        Main model: <span id="main-model-label" style="font-family:var(--mono); color:var(--blue)">-</span>
+      </div>
+    </div>
+
+    <!-- CORE: Action buttons -->
+    <div class="action-btns">
+      <button class="btn-primary" id="btn-ask" onclick="doAsk()">
+        <span id="spin-m" class="spinner"></span>
+        🔍 &nbsp;Ask RAGOptimizer
+      </button>
+      <button class="btn-secondary" id="btn-eval" onclick="doCompare()">
+        <span id="spin-c" class="spinner"></span>
+        📊 &nbsp;Compare Pipelines
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Right panel (CORE - do not change structure) -->
+  <div class="right-panel">
+
+    <div class="pane pane-output">
+      <div class="pane-header">
+        Output
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="output-tag" style="font-size:11px;color:var(--text-muted)"></span>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px;display:none" id="btn-format" onclick="toggleFormat()">{ } Format</button>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearOutput()">✕ Clear</button>
+        </div>
+      </div>
+      <div class="pane-body" id="output-body">
+        <span class="placeholder-msg">Response will appear here…</span>
+      </div>
+    </div>
+
+    <div class="pane pane-logs">
+      <div class="pane-header">
+        Logs
+        <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearLogs()">✕ Clear</button>
+      </div>
+      <div class="pane-body" id="logs-body">
+        <span class="placeholder-msg">Request logs will appear here…</span>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  /* ══════════════════════════════════════════════════════════════════
+     CORE - DO NOT EDIT (shared across all weeks)
+     ════════════════════════════════════════════════════════════════ */
+
+  const API = 'http://localhost:8000';
+
+  let _rawOutputText = '';
+  let _isFormatted   = false;
+
+  function _fmtDetail(detail, fallback) {
+    if (!detail) return fallback || 'Unknown error';
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail))
+      return detail.map(d => d.msg || JSON.stringify(d)).join(' | ');
+    return JSON.stringify(detail);
+  }
+
+  function _showFormatBtn(show) {
+    document.getElementById('btn-format').style.display = show ? '' : 'none';
+    _isFormatted = false;
+    document.getElementById('btn-format').textContent = '{ } Format';
+  }
+
+  function toggleFormat() {
+    const body = document.getElementById('output-body');
+    const btn  = document.getElementById('btn-format');
+    if (!_isFormatted) {
+      let src = _rawOutputText.trim();
+      if (src.startsWith('```')) {
+        const inner = src.split('```')[1] || '';
+        src = inner.startsWith('json') ? inner.slice(4).trim() : inner.trim();
+      }
+      try {
+        body.innerHTML = `<pre>${highlightJSON(JSON.parse(src))}</pre>`;
+        _isFormatted = true; btn.textContent = '≡ Raw';
+        addLog('info', 'Output formatted as JSON.');
+      } catch { addLog('warn', 'Could not parse output as JSON.'); }
+    } else {
+      body.textContent = _rawOutputText;
+      _isFormatted = false; btn.textContent = '{ } Format';
+    }
+  }
+
+  function clearOutput() {
+    document.getElementById('output-body').innerHTML =
+      '<span class="placeholder-msg">Response will appear here…</span>';
+    document.getElementById('output-tag').textContent = '';
+    _rawOutputText = ''; _showFormatBtn(false);
+  }
+
+  function clearLogs() {
+    document.getElementById('logs-body').innerHTML =
+      '<span class="placeholder-msg">Request logs will appear here…</span>';
+  }
+
+  function addLog(level, msg) {
+    const body = document.getElementById('logs-body');
+    const ph   = body.querySelector('.placeholder-msg');
+    if (ph) ph.remove();
+    const now = new Date().toLocaleTimeString('en-GB', {hour12: false});
+    const div = document.createElement('div');
+    div.className = `log-entry log-${level}`;
+    div.innerHTML =
+      `<span class="log-ts">${now}</span>` +
+      `<span class="log-level">${level.toUpperCase()}</span>` +
+      `<span class="log-msg">${escHtml(msg)}</span>`;
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function highlightJSON(obj) {
+    const str = JSON.stringify(obj, null, 2);
+    return escHtml(str).replace(
+      /(&quot;(?:\\u[0-9a-fA-F]{4}|\\[^u]|[^\\&])*&quot;(?:\s*:)?|\b(?:true|false)\b|\bnull\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      match => {
+        let c = 'n';
+        if (match.startsWith('&quot;'))
+          c = match.endsWith(':') ? 'k' : 's';
+        else if (match === 'true' || match === 'false') c = 'b';
+        else if (match === 'null') c = 'null';
+        return `<span class="j-${c}">${match}</span>`;
+      }
+    );
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function setLoading(active) {
+    document.querySelectorAll('.action-btns button').forEach(b => b.disabled = active);
+    document.querySelectorAll('.spinner').forEach(s => s.classList.toggle('active', active));
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     WEEK-SPECIFIC START
+     ════════════════════════════════════════════════════════════════ */
+
+  const DEMO_NOTES = 'what is scaled dot-product attention';
+
+  // checkHealth override: show both main + hyde model names in log
+  async function checkHealth() {
+    const chip = document.getElementById('health-chip');
+    const txt  = document.getElementById('health-text');
+    chip.className = ''; txt.textContent = 'Checking…';
+    try {
+      const r    = await fetch(`${API}/health`);
+      const data = await r.json();
+      chip.className  = 'online';
+      txt.textContent = `Online · ${escHtml(data.model || '')}`;
+      const models = data.models || {};
+      const detail = Object.entries(models).map(([k,v]) => `${k}: ${escHtml(v)}`).join(' | ');
+      addLog('success', `Health OK - ${detail}`);
+    } catch (e) {
+      chip.className  = 'offline';
+      txt.textContent = 'Offline';
+      addLog('error', `Health check failed - is the server running? (${e.message})`);
+    }
+  }
+
+  function fillDemo() {
+    document.getElementById('notes').value = DEMO_NOTES;
+    addLog('info', 'Demo query loaded.');
+  }
+
+  // Quick-fill from demo pills
+  function fillQuery(q) {
+    document.getElementById('notes').value = q;
+    addLog('info', `Query: "${q}"`);
+  }
+
+  // Load /config on startup and render pipeline status chips
+  async function loadPipelineStatus() {
+    try {
+      const r = await fetch(`${API}/config`);
+      if (!r.ok) return;
+      const cfg = await r.json();
+      renderPipelineStatus(cfg);
+      document.getElementById('hyde-model-label').textContent  = cfg.hyde_model  || '-';
+      document.getElementById('main-model-label').textContent  = cfg.model_id    || '-';
+      addLog('info', `Pipeline: HyDE=${cfg.hyde_enabled}, Reranker=${cfg.reranker_enabled}, Compress=${cfg.compressor_enabled}`);
+    } catch { /* server not yet up - health check will log the real error */ }
+  }
+
+  function renderPipelineStatus(cfg) {
+    const stages = [
+      {
+        label:  'HyDE',
+        active: cfg.hyde_enabled,
+        detail: cfg.hyde_prompt_voice ? `voice: ${cfg.hyde_prompt_voice}` : '',
+      },
+      {
+        label:  'Rerank',
+        active: cfg.reranker_enabled !== false && !!cfg.reranker_model,
+        detail: cfg.reranker_model ? cfg.reranker_model.split('/').pop() : '',
+      },
+      {
+        label:  'Compress',
+        active: cfg.compressor_enabled,
+        detail: cfg.compressor_keep_fraction != null
+          ? `${Math.round(cfg.compressor_keep_fraction * 100)}% keep`
+          : '',
+      },
+    ];
+    document.getElementById('pipeline-status').innerHTML = stages.map(s => `
+      <div class="stage-chip ${s.active ? 'stage-on' : 'stage-off'}">
+        <span class="stage-dot"></span>
+        <span class="stage-label">${escHtml(s.label)}</span>
+        ${s.detail ? `<span class="stage-detail">${escHtml(s.detail)}</span>` : ''}
+      </div>
+    `).join('');
+  }
+
+  // Primary action: POST /ask
+  async function doAsk() {
+    const query = document.getElementById('notes').value.trim();
+    if (!query) { addLog('warn', 'Query is empty.'); return; }
+
+    clearOutput(); setLoading(true);
+    document.getElementById('output-tag').textContent = 'POST /ask';
+    addLog('info', `POST /ask - "${query}"`);
+
+    try {
+      const r    = await fetch(`${API}/ask`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({query}),
+      });
+      const data = await r.json();
+
+      if (r.status === 503) {
+        // No vector index connected - expected in the lab starter
+        _renderNoIndex();
+        addLog('warn', `503 - ${_fmtDetail(data.detail, 'retrieval returned no candidates')}`);
+        return;
+      }
+      if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+
+      _renderAnswer(data, query);
+      addLog('success', `Answer received - confidence: ${data.confidence}, citations: ${data.citations?.length ?? 0}`);
+    } catch (e) {
+      document.getElementById('output-body').innerHTML =
+        `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally { setLoading(false); }
+  }
+
+  function _renderAnswer(data, query) {
+    const conf = data.confidence || 'low';
+    const confColors = {high: 'var(--green)', medium: 'var(--orange)', low: 'var(--text-muted)'};
+    const c = confColors[conf] || 'var(--text-muted)';
+    const citations = data.citations || [];
+
+    const citHtml = citations.length === 0
+      ? '<span style="font-size:11px;color:var(--text-muted);font-style:italic">No citations returned.</span>'
+      : citations.map(cit => `
+          <div class="cit-row">
+            <span class="cit-id">[${escHtml(cit.chunk_id)}]</span>
+            <span class="cit-quote">${escHtml(cit.quote || '-')}</span>
+          </div>`).join('');
+
+    const card = `
+      <div class="answer-card">
+        <div class="answer-meta">
+          <span class="conf-badge" style="background:${c}22;color:${c};border:1px solid ${c}44">
+            ${escHtml(conf)} confidence
+          </span>
+          <span style="font-size:11px;color:var(--text-muted)">${citations.length} citation${citations.length !== 1 ? 's' : ''}</span>
+          ${data.fallback_triggered ? '<span class="fallback-badge">fallback triggered</span>' : ''}
+        </div>
+        <div class="answer-text">${escHtml(data.answer)}</div>
+        ${citations.length > 0 ? `
+        <div class="cit-block">
+          <div class="cit-label">Sources</div>
+          ${citHtml}
+        </div>` : ''}
+      </div>
+    `;
+
+    const traceHtml = _renderTrace(data.pipeline_trace);
+    const rawJson = `<details style="margin-top:8px"><summary style="cursor:pointer;font-size:11px;color:var(--text-muted);padding:4px 0">Raw JSON</summary><pre style="margin-top:8px">${highlightJSON(data)}</pre></details>`;
+
+    document.getElementById('output-body').innerHTML = card + traceHtml + rawJson;
+    _rawOutputText = JSON.stringify(data, null, 2);
+    _showFormatBtn(true);
+  }
+
+  function _renderTrace(trace) {
+    if (!trace) return '';
+
+    // ── HyDE probe ────────────────────────────────────────────────────────
+    const hydeHtml = trace.hyde_probe
+      ? `<div class="trace-section">
+           <div class="trace-section-label">
+             HyDE Probe
+             <span class="trace-model-tag">gpt-5.4-nano</span>
+           </div>
+           <div class="trace-hyde-text">${escHtml(trace.hyde_probe)}</div>
+           <div class="trace-stat">→ ${trace.hyde_candidates_count} candidates retrieved via dense ANN</div>
+         </div>`
+      : `<div class="trace-section">
+           <div class="trace-stat" style="color:var(--text-muted)">HyDE disabled - skipped probe generation.</div>
+         </div>`;
+
+    // ── Candidate counts ──────────────────────────────────────────────────
+    const statsHtml = `
+      <div class="trace-section">
+        <div class="trace-section-label">Retrieval Counts</div>
+        <div class="trace-stats-row">
+          <span>HyDE probe: <b>${trace.hyde_candidates_count}</b></span>
+          <span class="trace-stat-sep">+</span>
+          <span>Original query: <b>${trace.original_candidates_count}</b></span>
+          <span class="trace-stat-sep">=</span>
+          <span>After union+dedupe: <b>${trace.combined_count}</b> unique chunks</span>
+        </div>
+      </div>`;
+
+    // ── Reranking comparison ──────────────────────────────────────────────
+    const after = trace.after_rerank || [];
+    const beforeMap = {};
+    (trace.before_rerank || []).forEach((c, i) => { beforeMap[c.chunk_id] = {score: c.vector_score, rank: i + 1}; });
+
+    const reRankRows = after.map((c, i) => {
+      const before = beforeMap[c.chunk_id];
+      const beforeRank = before ? before.rank : '?';
+      const moved = before ? (beforeRank - (i + 1)) : 0;
+      const arrowClass = moved > 0 ? 'arrow-up' : moved < 0 ? 'arrow-down' : 'arrow-same';
+      const arrowChar  = moved > 0 ? `↑${moved}` : moved < 0 ? `↓${Math.abs(moved)}` : '-';
+      return `<tr>
+        <td class="trace-rank">#${i + 1}</td>
+        <td class="trace-cid-cell">${escHtml(c.chunk_id.slice(0, 20))}${c.chunk_id.length > 20 ? '…' : ''}</td>
+        <td class="trace-preview">${escHtml(c.preview.slice(0, 90))}…</td>
+        <td class="trace-score-v">${c.vector_score.toFixed(4)}</td>
+        <td class="trace-arrow ${arrowClass}">${arrowChar}</td>
+        <td class="trace-score-r">${c.rerank_score.toFixed(3)}</td>
+      </tr>`;
+    }).join('');
+
+    const reRankHtml = `
+      <div class="trace-section">
+        <div class="trace-section-label">
+          Reranking
+          <span class="trace-model-tag">bge-reranker-base</span>
+          <span style="font-size:9px;color:var(--text-muted);letter-spacing:0;text-transform:none">showing top ${after.length}</span>
+        </div>
+        <table class="trace-table">
+          <thead><tr>
+            <th>Rank</th><th>Chunk ID</th><th>Preview</th>
+            <th>Vector ↕</th><th>Move</th><th>Rerank ↕</th>
+          </tr></thead>
+          <tbody>${reRankRows}</tbody>
+        </table>
+      </div>`;
+
+    // ── Final selection ───────────────────────────────────────────────────
+    const final = trace.final_chunks || [];
+    const finalRows = final.map((c, i) => `
+      <div class="trace-final-row">
+        <span class="trace-final-num">${i + 1}</span>
+        <span class="cit-id">[${escHtml(c.chunk_id)}]</span>
+        <span class="trace-preview">${escHtml(c.preview.slice(0, 130))}…</span>
+      </div>`).join('');
+
+    const finalHtml = `
+      <div class="trace-section">
+        <div class="trace-section-label">
+          Final Selection
+          <span class="trace-model-tag">${final.length} chunks → LLM</span>
+          <span style="font-size:9px;color:var(--text-muted);letter-spacing:0;text-transform:none">after compression</span>
+        </div>
+        ${finalRows || '<span style="font-size:11px;color:var(--text-muted)">No chunks selected.</span>'}
+      </div>`;
+
+    return `
+      <details class="trace-panel" open>
+        <summary>Pipeline Trace</summary>
+        <div class="trace-body">
+          ${hydeHtml}
+          ${statsHtml}
+          ${reRankHtml}
+          ${finalHtml}
+        </div>
+      </details>`;
+  }
+
+  function _renderNoIndex() {
+    document.getElementById('output-body').innerHTML = `
+      <div class="error-box">503 - retrieval returned no candidates</div>
+      <div class="notice-box">
+        <strong>Retrieval found nothing.</strong><br>
+        The retriever searches the Week 4 KnowledgeVault Qdrant collection
+        (<code>_dense_search</code> / <code>_hybrid_search</code> in
+        <code>app/retriever.py</code>).<br><br>
+        Check <code>QDRANT_URL</code>, <code>QDRANT_API_KEY</code> and
+        <code>QDRANT_COLLECTION</code> in <code>.env</code>, and confirm the
+        W4 collection is populated.
+      </div>
+    `;
+  }
+
+  // ── Eval action: POST /eval ──────────────────────────────────────────────────
+
+  async function doEval() {
+    clearOutput(); setLoading(true);
+    document.getElementById('output-tag').textContent = 'POST /eval';
+    addLog('info', 'POST /eval - running golden dataset through the full pipeline…');
+
+    const body = document.getElementById('output-body');
+    body.innerHTML = '<span class="placeholder-msg">Running 10 golden questions through HyDE → hybrid → rerank → compress → LLM… (60-120 s)</span>';
+
+    try {
+      const r    = await fetch(`${API}/eval`, { method: 'POST' });
+      const data = await r.json();
+      if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+
+      _renderEval(data, body);
+      addLog('success',
+        `Eval done - ${data.rows_scored} rows - ` +
+        `groundedness=${(data.groundedness * 100).toFixed(1)}% - ` +
+        `citation_recall=${(data.citation_recall * 100).toFixed(1)}% - ` +
+        `false_answer=${(data.false_answer_rate * 100).toFixed(1)}%`);
+    } catch (e) {
+      body.innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally { setLoading(false); }
+  }
+
+  // ── Eval renderer ────────────────────────────────────────────────────────────
+
+  function _renderEval(data, body) {
+    _rawOutputText = JSON.stringify(data, null, 2);
+    _showFormatBtn(true);
+
+    // ── Metric cards ──────────────────────────────────────────────────────────
+    const METRICS = [
+      { key: 'groundedness',       label: 'Groundedness',   icon: '🎯', higher: true  },
+      { key: 'citation_validity',  label: 'Cit Validity',   icon: '📍', higher: true  },
+      { key: 'citation_recall',    label: 'Cit Recall',     icon: '📚', higher: true  },
+      { key: 'false_answer_rate',  label: 'False Answer',   icon: '⚠️', higher: false },
+      { key: 'false_refusal_rate', label: 'False Refusal',  icon: '🚫', higher: false },
+    ];
+    const cards = METRICS.map(m => {
+      const val = data[m.key] || 0;
+      const pct = (val * 100).toFixed(1);
+      const good = m.higher ? val >= 0.75 : val < 0.15;
+      return `<div class="metric-card ${good ? 'mc-good' : 'mc-warn'}">
+        <div class="mc-icon">${m.icon}</div>
+        <div class="mc-val">${pct}%</div>
+        <div class="mc-label">${escHtml(m.label)}</div>
+      </div>`;
+    }).join('');
+
+    // ── Per-row detail ────────────────────────────────────────────────────────
+    const rows = data.rows || [];
+
+    const rowCards = rows.map((r, i) => {
+      const expChip = r.expected === 'answer'
+        ? `<span class="er-chip chip-exp-a">expect: answer</span>`
+        : `<span class="er-chip chip-exp-r">expect: refuse</span>`;
+      const gotChip = r.actual === 'answered'
+        ? `<span class="er-chip chip-got-a">got: answered</span>`
+        : `<span class="er-chip chip-got-r">got: refused</span>`;
+
+      const confCls = r.confidence === 'high' ? 'chip-conf-h'
+                    : r.confidence === 'medium' ? 'chip-conf-m' : 'chip-conf-l';
+      const confChip = `<span class="er-chip ${confCls}">${escHtml(r.confidence || 'low')}</span>`;
+
+      let failChips = '';
+      if (r.false_answer)  failChips += `<span class="er-chip chip-bad">false answer</span>`;
+      if (r.false_refusal) failChips += `<span class="er-chip chip-bad">false refusal</span>`;
+      if (!r.grounded && !r.false_refusal && !r.false_answer)
+                           failChips += `<span class="er-chip chip-bad">not grounded</span>`;
+      if (!r.cit_recall_ok && r.actual === 'answered')
+                           failChips += `<span class="er-chip chip-bad">no citation</span>`;
+      if (r.fallback_triggered)
+                           failChips += `<span class="er-chip chip-conf-l">fallback</span>`;
+
+      const citeChips = (r.cited_ids || []).map(id =>
+        `<span class="er-chip chip-cite">${escHtml(id.slice(0, 12))}…</span>`).join('');
+
+      // Expanded: mini answer card + full pipeline trace
+      const citRowsHtml = (r.cited_ids || []).length === 0
+        ? '<span style="font-size:11px;color:var(--text-muted);font-style:italic">No citations.</span>'
+        : (r.cited_ids || []).map(id =>
+            `<div class="cit-row"><span class="cit-id">[${escHtml(id)}]</span></div>`
+          ).join('');
+
+      const answerCardHtml = `
+        <div class="answer-card" style="margin-bottom:12px">
+          <div class="answer-meta">
+            ${(() => {
+              const c = r.confidence === 'high' ? 'var(--green)'
+                      : r.confidence === 'medium' ? 'var(--orange)'
+                      : 'var(--text-muted)';
+              return `<span class="conf-badge" style="background:${c}22;color:${c};border:1px solid ${c}44">
+                        ${escHtml(r.confidence || 'low')} confidence
+                      </span>`;
+            })()}
+            <span style="font-size:11px;color:var(--text-muted)">${(r.cited_ids||[]).length} citation${(r.cited_ids||[]).length !== 1 ? 's' : ''}</span>
+            ${r.fallback_triggered ? '<span class="fallback-badge">fallback triggered</span>' : ''}
+          </div>
+          <div class="answer-text">${escHtml(r.system_answer || '-')}</div>
+          ${(r.cited_ids || []).length > 0 ? `
+          <div class="cit-block">
+            <div class="cit-label">Sources</div>
+            ${citRowsHtml}
+          </div>` : ''}
+        </div>`;
+
+      const traceHtml = r.pipeline_trace ? _renderTrace(r.pipeline_trace) : '';
+
+      return `
+        <details class="eval-row ${r.passed ? 'er-pass' : 'er-fail'}">
+          <summary class="er-summary">
+            <div class="er-top">
+              <span class="er-num">#${i + 1}</span>
+              <span class="er-badge ${r.passed ? 'er-pass-badge' : 'er-fail-badge'}">${r.passed ? '✓ PASS' : '✗ FAIL'}</span>
+              <div class="er-chips">${expChip}${gotChip}${confChip}${failChips}${citeChips}</div>
+              <span class="er-toggle"></span>
+            </div>
+            <div class="er-question">${escHtml(r.question)}</div>
+            <div class="er-answer">${escHtml(r.system_answer || '-')}</div>
+          </summary>
+          <div class="er-expanded">
+            ${answerCardHtml}
+            ${traceHtml}
+          </div>
+        </details>`;
+    }).join('');
+
+    body.innerHTML = `
+      <div class="eval-header">📊 Eval - ${data.rows_scored} questions</div>
+      <div class="metrics-grid">${cards}</div>
+      <div class="eval-rows-label">Row by row <span style="font-weight:400;text-transform:none;letter-spacing:0">(expand to see full pipeline trace)</span></div>
+      ${rowCards}`;
+  }
+
+  // ── Compare action: POST /eval/compare ──────────────────────────────────────
+
+  async function doCompare() {
+    clearOutput(); setLoading(true);
+    document.getElementById('output-tag').textContent = 'POST /eval/compare';
+    addLog('info', 'POST /eval/compare - running W5 baseline + W6 full pipeline on 10 questions…');
+
+    const body = document.getElementById('output-body');
+    body.innerHTML = '<span class="placeholder-msg">Running both pipelines on all golden questions… each question runs TWICE (150-210 s total)</span>';
+
+    try {
+      const r    = await fetch(`${API}/eval/compare`, { method: 'POST' });
+      const data = await r.json();
+      if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+
+      _renderCompare(data, body);
+      const b = data.baseline, f = data.full;
+      addLog('success',
+        `Compare done - ${data.rows_scored} rows - ` +
+        `groundedness: ${(b.groundedness * 100).toFixed(0)}% → ${(f.groundedness * 100).toFixed(0)}% - ` +
+        `cit_recall: ${(b.citation_recall * 100).toFixed(0)}% → ${(f.citation_recall * 100).toFixed(0)}%`);
+    } catch (e) {
+      body.innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally { setLoading(false); }
+  }
+
+  // ── Compare renderer ─────────────────────────────────────────────────────────
+
+  function _renderCompare(data, body) {
+    _rawOutputText = JSON.stringify(data, null, 2);
+    _showFormatBtn(true);
+
+    const b = data.baseline || {};
+    const f = data.full     || {};
+
+    // ── Delta table ───────────────────────────────────────────────────────────
+    const METRICS = [
+      { key: 'groundedness',       label: 'Groundedness',   higher: true  },
+      { key: 'citation_validity',  label: 'Cit Validity',   higher: true  },
+      { key: 'citation_recall',    label: 'Cit Recall',     higher: true  },
+      { key: 'false_answer_rate',  label: 'False Answer',   higher: false },
+      { key: 'false_refusal_rate', label: 'False Refusal',  higher: false },
+    ];
+
+    const deltaRows = METRICS.map(m => {
+      const bv = (b[m.key] || 0) * 100;
+      const fv = (f[m.key] || 0) * 100;
+      const d  = fv - bv;
+      // "improved" means: for higher-is-better metrics, positive delta is good;
+      // for lower-is-better (false_*), negative delta is good.
+      const improved = m.higher ? d > 0.5 : d < -0.5;
+      const regressed = m.higher ? d < -0.5 : d > 0.5;
+      const cls = improved ? 'delta-up' : regressed ? 'delta-down' : 'delta-same';
+      const arrow = improved ? ' ↑' : regressed ? ' ↓' : ' -';
+      const sign = d >= 0 ? '+' : '';
+      return `<tr>
+        <td class="metric-name">${escHtml(m.label)}</td>
+        <td class="col-b">${bv.toFixed(1)}%</td>
+        <td class="col-f">${fv.toFixed(1)}%</td>
+        <td class="col-d ${cls}">${sign}${d.toFixed(1)}%${arrow}</td>
+      </tr>`;
+    }).join('');
+
+    const deltaTable = `
+      <table class="delta-table">
+        <thead><tr>
+          <th>Metric</th>
+          <th class="col-b">Baseline <span class="pipeline-tag-b">W5 hybrid</span></th>
+          <th class="col-f">Full <span class="pipeline-tag-f">W6 pipeline</span></th>
+          <th class="col-d">Δ Delta</th>
+        </tr></thead>
+        <tbody>${deltaRows}</tbody>
+      </table>`;
+
+    // ── Per-row breakdown ─────────────────────────────────────────────────────
+    const rows = data.rows || [];
+
+    const rowCards = rows.map((r, i) => {
+      const bPass = r.baseline_passed;
+      const fPass = r.full_passed;
+      const improved  = !bPass && fPass;
+      const regressed = bPass && !fPass;
+
+      const bChip = bPass
+        ? `<span class="er-chip chip-b-pass">B: PASS</span>`
+        : `<span class="er-chip chip-b-fail">B: FAIL</span>`;
+      const fChip = fPass
+        ? `<span class="er-chip chip-f-pass">W6: PASS</span>`
+        : `<span class="er-chip chip-f-fail">W6: FAIL</span>`;
+
+      let diffChip = '';
+      if (improved)  diffChip = `<span class="er-chip chip-improved">↑ improved</span>`;
+      else if (regressed) diffChip = `<span class="er-chip chip-regressed">↓ regressed</span>`;
+      else diffChip = `<span class="er-chip chip-same">${bPass ? '✓ same pass' : '✗ same fail'}</span>`;
+
+      const expChip = r.expected === 'answer'
+        ? `<span class="er-chip chip-exp-a">expect: answer</span>`
+        : `<span class="er-chip chip-exp-r">expect: refuse</span>`;
+
+      // Expanded: side-by-side answer cards + W6 pipeline trace
+      const _confColor = conf =>
+        conf === 'high' ? 'var(--green)' : conf === 'medium' ? 'var(--orange)' : 'var(--text-muted)';
+
+      const _miniCard = (answer, confidence, fallback, citedIds, pipelineTag) => {
+        const c = _confColor(confidence);
+        const cits = (citedIds || []).map(id =>
+          `<div class="cit-row"><span class="cit-id">[${escHtml(id)}]</span></div>`).join('');
+        return `
+          <div>
+            <div class="pipeline-col-label">
+              ${pipelineTag}
+            </div>
+            <div class="answer-card">
+              <div class="answer-meta">
+                <span class="conf-badge" style="background:${c}22;color:${c};border:1px solid ${c}44">
+                  ${escHtml(confidence || 'low')} confidence
+                </span>
+                <span style="font-size:11px;color:var(--text-muted)">${(citedIds||[]).length} citation${(citedIds||[]).length !== 1?'s':''}</span>
+                ${fallback ? '<span class="fallback-badge">fallback</span>' : ''}
+              </div>
+              <div class="answer-text">${escHtml(answer || '-')}</div>
+              ${cits ? `<div class="cit-block"><div class="cit-label">Sources</div>${cits}</div>` : ''}
+            </div>
+          </div>`;
+      };
+
+      const expandedHtml = `
+        <div class="compare-answers">
+          ${_miniCard(r.baseline_answer, r.baseline_confidence, r.baseline_fallback, r.baseline_cited_ids,
+            '<span class="pipeline-tag-b">Baseline · W5 hybrid</span>')}
+          ${_miniCard(r.full_answer, r.full_confidence, r.full_fallback, r.full_cited_ids,
+            '<span class="pipeline-tag-f">W6 RAGOptimizer</span>')}
+        </div>
+        ${r.full_pipeline_trace ? _renderTrace(r.full_pipeline_trace) : ''}`;
+
+      return `
+        <details class="eval-row ${fPass ? 'er-pass' : 'er-fail'}">
+          <summary class="er-summary">
+            <div class="er-top">
+              <span class="er-num">#${i + 1}</span>
+              <div class="er-chips">${expChip}${bChip}${fChip}${diffChip}</div>
+              <span class="er-toggle"></span>
+            </div>
+            <div class="er-question">${escHtml(r.question)}</div>
+          </summary>
+          <div class="er-expanded">${expandedHtml}</div>
+        </details>`;
+    }).join('');
+
+    body.innerHTML = `
+      <div class="compare-header">📊 Before vs After - ${data.rows_scored} questions</div>
+      <div class="compare-subtitle">
+        <span class="pipeline-tag-b">Baseline</span> = Week 5 hybrid retrieval (dense+BM25+RRF, no HyDE, no reranker, no compressor)
+        &nbsp;&nbsp;→&nbsp;&nbsp;
+        <span class="pipeline-tag-f">W6</span> = HyDE probe + hybrid + cross-encoder rerank + extractive compression
+      </div>
+      ${deltaTable}
+      <div class="eval-rows-label">Row by row <span style="font-weight:400;text-transform:none;letter-spacing:0">(expand to see side-by-side answers + W6 trace)</span></div>
+      ${rowCards}`;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     CORE: Init - always runs on load, do not remove
+     ════════════════════════════════════════════════════════════════ */
+  checkHealth();
+  loadPipelineStatus();  // WEEK-SPECIFIC: auto-load pipeline status on startup
+</script>
+</body>
+</html>

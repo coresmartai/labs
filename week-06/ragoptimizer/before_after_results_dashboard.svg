@@ -1,0 +1,129 @@
+<svg viewBox="0 0 1320 748" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F8FAFC"/>
+      <stop offset="100%" stop-color="#ECFEFF"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+      <feOffset dx="0" dy="3" result="off"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.16"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <rect width="1320" height="748" fill="url(#bg)"/>
+
+  <text x="660" y="46" text-anchor="middle" font-size="26" font-weight="700" fill="#0F172A">/eval/compare: Before vs After on 10 Golden Questions</text>
+  <text x="660" y="73" text-anchor="middle" font-size="13.5" fill="#64748B">CitationRAG (hybrid + gate)  vs  RAGOptimizer (HyDE + hybrid + cross-encoder rerank + extractive compression), same gate on both channels</text>
+
+  <!-- ===== KPI tiles ===== -->
+  <!-- tile 1 groundedness -->
+  <g filter="url(#shadow)"><rect x="40" y="98" width="292" height="108" rx="14" fill="#FFFFFF" stroke="#A7F3D0" stroke-width="1.5"/></g>
+  <rect x="40" y="98" width="6" height="108" rx="3" fill="#10B981"/>
+  <text x="186" y="126" text-anchor="middle" font-size="13" font-weight="700" fill="#475569">groundedness</text>
+  <text x="186" y="164" text-anchor="middle" font-size="27" font-weight="800" fill="#0F172A">0.80 → 1.00</text>
+  <rect x="118" y="178" width="136" height="22" rx="11" fill="#ECFDF5"/>
+  <text x="186" y="193" text-anchor="middle" font-size="12" font-weight="700" fill="#059669">+0.20 ↑ improved</text>
+
+  <!-- tile 2 citation_recall -->
+  <g filter="url(#shadow)"><rect x="356" y="98" width="292" height="108" rx="14" fill="#FFFFFF" stroke="#A7F3D0" stroke-width="1.5"/></g>
+  <rect x="356" y="98" width="6" height="108" rx="3" fill="#10B981"/>
+  <text x="502" y="126" text-anchor="middle" font-size="13" font-weight="700" fill="#475569">citation_recall</text>
+  <text x="502" y="164" text-anchor="middle" font-size="27" font-weight="800" fill="#0F172A">0.80 → 1.00</text>
+  <rect x="434" y="178" width="136" height="22" rx="11" fill="#ECFDF5"/>
+  <text x="502" y="193" text-anchor="middle" font-size="12" font-weight="700" fill="#059669">+0.20 ↑ improved</text>
+
+  <!-- tile 3 false_refusal_rate -->
+  <g filter="url(#shadow)"><rect x="672" y="98" width="292" height="108" rx="14" fill="#FFFFFF" stroke="#A7F3D0" stroke-width="1.5"/></g>
+  <rect x="672" y="98" width="6" height="108" rx="3" fill="#10B981"/>
+  <text x="818" y="126" text-anchor="middle" font-size="13" font-weight="700" fill="#475569">false_refusal_rate</text>
+  <text x="818" y="164" text-anchor="middle" font-size="27" font-weight="800" fill="#0F172A">0.20 → 0.00</text>
+  <rect x="734" y="178" width="168" height="22" rx="11" fill="#ECFDF5"/>
+  <text x="818" y="193" text-anchor="middle" font-size="12" font-weight="700" fill="#059669">−0.20 ↓ both recovered</text>
+
+  <!-- tile 4 summary -->
+  <g filter="url(#shadow)"><rect x="988" y="98" width="292" height="108" rx="14" fill="#EEF2FF" stroke="#C7D2FE" stroke-width="1.5"/></g>
+  <rect x="988" y="98" width="6" height="108" rx="3" fill="#4F46E5"/>
+  <text x="1134" y="126" text-anchor="middle" font-size="13" font-weight="700" fill="#3730A3">net result on golden set</text>
+  <text x="1134" y="164" text-anchor="middle" font-size="27" font-weight="800" fill="#1E1B4B">2 of 2 fixed</text>
+  <text x="1134" y="192" text-anchor="middle" font-size="12" fill="#475569">2/10 failed at baseline · 0 regressions</text>
+
+  <!-- ===== Metric table ===== -->
+  <g filter="url(#shadow)"><rect x="40" y="232" width="1240" height="278" rx="14" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/></g>
+  <!-- header -->
+  <path d="M40,246 a14,14 0 0 1 14,-14 h1212 a14,14 0 0 1 14,14 v28 h-1240 z" fill="#EEF2FF"/>
+  <text x="72"   y="262" font-size="13" font-weight="700" fill="#1E1B4B">Metric</text>
+  <text x="560"  y="262" text-anchor="middle" font-size="13" font-weight="700" fill="#1E1B4B">Baseline · CitationRAG</text>
+  <text x="760"  y="262" text-anchor="middle" font-size="13" font-weight="700" fill="#1E1B4B">Full · RAGOptimizer</text>
+  <text x="930"  y="262" text-anchor="middle" font-size="13" font-weight="700" fill="#1E1B4B">Δ</text>
+  <text x="1030" y="262" font-size="13" font-weight="700" fill="#1E1B4B">Read</text>
+
+  <!-- row 1 -->
+  <text x="72"   y="303" font-size="13.5" font-weight="600" fill="#0F172A">groundedness</text>
+  <text x="560"  y="303" text-anchor="middle" font-size="13.5" fill="#475569">0.80</text>
+  <text x="760"  y="303" text-anchor="middle" font-size="13.5" fill="#0F172A" font-weight="600">1.00</text>
+  <text x="930"  y="303" text-anchor="middle" font-size="13.5" font-weight="700" fill="#10B981">+0.20 ↑</text>
+  <text x="1030" y="303" font-size="11.5" font-style="italic" fill="#64748B">improved: two rows flipped</text>
+  <line x1="56" y1="320" x2="1264" y2="320" stroke="#EEF2F6" stroke-width="1"/>
+
+  <!-- row 2 -->
+  <rect x="41" y="321" width="1238" height="46" fill="#F8FAFC"/>
+  <text x="72"   y="349" font-size="13.5" font-weight="600" fill="#0F172A">citation_validity</text>
+  <text x="560"  y="349" text-anchor="middle" font-size="13.5" fill="#475569">1.00</text>
+  <text x="760"  y="349" text-anchor="middle" font-size="13.5" fill="#475569">1.00</text>
+  <text x="930"  y="349" text-anchor="middle" font-size="13.5" font-weight="700" fill="#94A3B8">0.00</text>
+  <text x="1030" y="349" font-size="11.5" font-style="italic" fill="#64748B">flat, and able to drop</text>
+
+  <!-- row 3 -->
+  <text x="72"   y="395" font-size="13.5" font-weight="600" fill="#0F172A">citation_recall</text>
+  <text x="560"  y="395" text-anchor="middle" font-size="13.5" fill="#475569">0.80</text>
+  <text x="760"  y="395" text-anchor="middle" font-size="13.5" fill="#0F172A" font-weight="600">1.00</text>
+  <text x="930"  y="395" text-anchor="middle" font-size="13.5" font-weight="700" fill="#10B981">+0.20 ↑</text>
+  <text x="1030" y="395" font-size="11.5" font-style="italic" fill="#64748B">improved: same flipped rows</text>
+  <line x1="56" y1="412" x2="1264" y2="412" stroke="#EEF2F6" stroke-width="1"/>
+
+  <!-- row 4 -->
+  <rect x="41" y="413" width="1238" height="46" fill="#F8FAFC"/>
+  <text x="72"   y="441" font-size="13.5" font-weight="600" fill="#0F172A">false_answer_rate</text>
+  <text x="560"  y="441" text-anchor="middle" font-size="13.5" fill="#475569">0.00</text>
+  <text x="760"  y="441" text-anchor="middle" font-size="13.5" fill="#475569">0.00</text>
+  <text x="930"  y="441" text-anchor="middle" font-size="13.5" font-weight="700" fill="#94A3B8">0.00</text>
+  <text x="1030" y="441" font-size="11.5" font-style="italic" fill="#64748B">no confident-wrong answers</text>
+
+  <!-- row 5 -->
+  <text x="72"   y="487" font-size="13.5" font-weight="600" fill="#0F172A">false_refusal_rate</text>
+  <text x="560"  y="487" text-anchor="middle" font-size="13.5" fill="#475569">0.20</text>
+  <text x="760"  y="487" text-anchor="middle" font-size="13.5" fill="#0F172A" font-weight="600">0.00</text>
+  <text x="930"  y="487" text-anchor="middle" font-size="13.5" font-weight="700" fill="#10B981">−0.20 ↓</text>
+  <text x="1030" y="487" font-size="11.5" font-style="italic" fill="#64748B">both refusals recovered</text>
+
+  <!-- ===== Per-question grid ===== -->
+  <text x="40" y="548" font-size="14" font-weight="700" fill="#334155">Per-question outcome: 8/10 passed both; the entire Δ is two flipped rows (Q3 + Q5)</text>
+
+  <g font-family="system-ui, sans-serif">
+    <!-- chips: width 111, step 125, y 562..614 -->
+    <!-- Q1 -->
+    <g transform="translate(40,562)"><rect width="111" height="52" rx="9" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/><text x="55" y="23" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">Q1</text><text x="55" y="40" text-anchor="middle" font-size="10.5" fill="#64748B">pass · pass</text></g>
+    <!-- Q2 -->
+    <g transform="translate(165,562)"><rect width="111" height="52" rx="9" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/><text x="55" y="23" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">Q2</text><text x="55" y="40" text-anchor="middle" font-size="10.5" fill="#64748B">pass · pass</text></g>
+    <!-- Q3 improved -->
+    <g transform="translate(290,562)"><rect width="111" height="52" rx="9" fill="#ECFDF5" stroke="#10B981" stroke-width="2.5"/><text x="55" y="23" text-anchor="middle" font-size="13" font-weight="800" fill="#064E3B">Q3  ✓↑</text><text x="55" y="40" text-anchor="middle" font-size="10" font-weight="700" fill="#059669">✗ → ✓ improved</text></g>
+    <!-- Q4 -->
+    <g transform="translate(415,562)"><rect width="111" height="52" rx="9" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/><text x="55" y="23" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">Q4</text><text x="55" y="40" text-anchor="middle" font-size="10.5" fill="#64748B">pass · pass</text></g>
+    <!-- Q5 same fail -->
+    <g transform="translate(540,562)"><rect width="111" height="52" rx="9" fill="#ECFDF5" stroke="#10B981" stroke-width="2.5"/><text x="55" y="23" text-anchor="middle" font-size="13" font-weight="800" fill="#064E3B">Q5  ✓↑</text><text x="55" y="40" text-anchor="middle" font-size="10" font-weight="700" fill="#059669">✗ → ✓ improved</text></g>
+    <!-- Q6 -->
+    <g transform="translate(665,562)"><rect width="111" height="52" rx="9" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/><text x="55" y="23" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">Q6</text><text x="55" y="40" text-anchor="middle" font-size="10.5" fill="#64748B">pass · pass</text></g>
+    <!-- Q7 -->
+    <g transform="translate(790,562)"><rect width="111" height="52" rx="9" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/><text x="55" y="23" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">Q7</text><text x="55" y="40" text-anchor="middle" font-size="10.5" fill="#64748B">pass · pass</text></g>
+    <!-- Q8 -->
+    <g transform="translate(915,562)"><rect width="111" height="52" rx="9" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/><text x="55" y="23" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">Q8</text><text x="55" y="40" text-anchor="middle" font-size="10.5" fill="#64748B">pass · pass</text></g>
+    <!-- Q9 -->
+    <g transform="translate(1040,562)"><rect width="111" height="52" rx="9" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/><text x="55" y="23" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">Q9</text><text x="55" y="40" text-anchor="middle" font-size="10.5" fill="#64748B">pass · pass</text></g>
+    <!-- Q10 -->
+    <g transform="translate(1165,562)"><rect width="111" height="52" rx="9" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5"/><text x="55" y="23" text-anchor="middle" font-size="13" font-weight="700" fill="#334155">Q10</text><text x="55" y="40" text-anchor="middle" font-size="10.5" fill="#64748B">pass · pass</text></g>
+  </g>
+
+  <text x="660" y="732" text-anchor="middle" font-size="11" fill="#94A3B8">Applied GenAI &amp; Agentic AI Engineering Course · Week 06</text>
+</svg>
