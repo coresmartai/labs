@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<!--
+  Applied GenAI & Agentic AI Engineering Course
+  BreakRAG(tm) - Week 7
+  ================================================
+  Based on _templates/index.template.html
+  Reference: week 02/w02v02c01/index.html, week 06/w06v02c01/index.html
+
+  Intentional deviations (documented, not force-fit):
+    1. id="notes" textarea labelled "Seed Question" - the primary input is a
+       seed question for adversarial eval, not release notes.
+    2. fillDemo() also fills a second textarea #answer used by /score-one -
+       CORE fillDemo() body is overridden in WEEK-SPECIFIC to target both.
+    3. "Answer (for scoring)" textarea added inside the primary panel section
+       below demo pills - /score-one needs question + answer from the UI.
+    4. checkHealth() overridden in WEEK-SPECIFIC to log both judge model names
+       from the models dict returned by /health.
+    5. Primary action is "Run Demo Suite" (SSE Pattern B.1 to /run-demo-stream)
+       instead of a standard POST action.
+    6. Left panel has overflow-y: auto (WEEK-SPECIFIC) - 3 panel sections push
+       content past available height on smaller screens.
+    7. Output pane renders a structured scorecard table and verdict cards;
+       raw JSON is always available via { } Format button in the pane header.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Applied GenAI & Agentic AI Engineering Course Week 7</title>
+  <style>
+
+    /* ══════════════════════════════════════════════════════════════
+       CORE - DO NOT EDIT (shared across all weeks)
+       ══════════════════════════════════════════════════════════════ */
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0d1117;
+      --surface:     #161b22;
+      --surface-2:   #21262d;
+      --surface-3:   #2d333b;
+      --border:      #30363d;
+      --text:        #e6edf3;
+      --text-muted:  #7d8590;
+      --blue:        #58a6ff;
+      --blue-dim:    #1f3a5f;
+      --green:       #3fb950;
+      --green-dim:   #1a3a28;
+      --red:         #f85149;
+      --red-dim:     #3d1a1a;
+      --orange:      #d29922;
+      --radius:      8px;
+      --mono:        'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; height: 52px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 15px; font-weight: 600; color: var(--text);
+    }
+    .header-title .logo {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #1a56db, #7e3af2);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+    }
+    .week-badge {
+      background: var(--blue-dim); color: var(--blue);
+      font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 20px;
+      border: 1px solid #1f4080;
+    }
+    .header-sub { color: var(--text-muted); font-weight: 400; }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+
+    button {
+      cursor: pointer; border: none; border-radius: var(--radius);
+      font-size: 13px; font-weight: 500;
+      transition: opacity 0.15s, transform 0.1s;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .btn-ghost {
+      background: transparent; color: var(--text-muted);
+      border: 1px solid var(--border); padding: 6px 12px;
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+
+    .btn-primary { background: #1a56db; color: #fff; padding: 8px 16px; }
+    .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+
+    .btn-secondary {
+      background: var(--surface-2); color: var(--text);
+      border: 1px solid var(--border); padding: 8px 16px;
+    }
+    .btn-secondary:hover:not(:disabled) { background: var(--surface-3); }
+
+    .btn-demo {
+      background: transparent; color: var(--blue);
+      border: 1px solid var(--blue-dim); padding: 5px 12px; font-size: 12px;
+    }
+    .btn-demo:hover:not(:disabled) { background: var(--blue-dim); }
+
+    #health-chip {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px;
+      font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text-muted);
+    }
+    #health-chip:hover { background: var(--surface-3); }
+    #health-chip.online  { color: var(--green); border-color: #1a4a2e; }
+    #health-chip.offline { color: var(--red);   border-color: #4a1a1a; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+    .online  .dot { background: var(--green); box-shadow: 0 0 6px #3fb95088; animation: pulse 2s infinite; }
+    .offline .dot { background: var(--red); }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    main {
+      display: grid; grid-template-columns: 380px 1fr;
+      flex: 1; overflow: hidden;
+    }
+
+    .left-panel {
+      display: flex; flex-direction: column;
+      border-right: 1px solid var(--border); overflow: hidden;
+    }
+
+    .panel-section { padding: 16px; border-bottom: 1px solid var(--border); }
+    .panel-section:last-child { border-bottom: none; }
+
+    label {
+      display: block; font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); margin-bottom: 8px;
+    }
+
+    textarea, input[type="text"], select {
+      width: 100%; background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text); font-size: 13px; font-family: inherit;
+      outline: none; transition: border-color 0.15s;
+    }
+    textarea { resize: none; }
+    textarea:focus, input:focus, select:focus {
+      border-color: var(--blue); box-shadow: 0 0 0 3px #1a56db22;
+    }
+
+    #notes {
+      flex: 1; min-height: 0; height: 0;
+      padding: 10px 12px; line-height: 1.6;
+    }
+
+    .input-row {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 8px;
+    }
+
+    .action-btns { display: flex; flex-direction: column; gap: 8px; padding: 16px; }
+    .action-btns button { width: 100%; justify-content: center; }
+
+    .right-panel { display: flex; flex-direction: column; overflow: hidden; }
+
+    .pane { display: flex; flex-direction: column; overflow: hidden; }
+    .pane-output { flex: 1; border-bottom: 1px solid var(--border); }
+    .pane-logs   { height: 200px; flex-shrink: 0; }
+
+    .pane-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); flex-shrink: 0;
+    }
+
+    .pane-body {
+      flex: 1; overflow-y: auto; padding: 16px;
+      font-family: var(--mono); font-size: 13px; line-height: 1.6;
+    }
+    .pane-body::-webkit-scrollbar { width: 6px; }
+    .pane-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .placeholder-msg { color: var(--text-muted); font-family: inherit; font-size: 13px; font-style: italic; }
+
+    .j-k    { color: #79c0ff; }
+    .j-s    { color: #a5d6ff; }
+    .j-n    { color: #ffa657; }
+    .j-b    { color: #7ee787; }
+    .j-null { color: var(--text-muted); }
+
+    .log-entry { display: flex; gap: 10px; padding: 2px 0; font-size: 12px; line-height: 1.5; }
+    .log-ts    { color: var(--text-muted); flex-shrink: 0; }
+    .log-level { font-weight: 700; flex-shrink: 0; width: 50px; }
+    .log-msg   { color: var(--text); word-break: break-word; }
+    .log-info    .log-level { color: var(--blue); }
+    .log-success .log-level { color: var(--green); }
+    .log-warn    .log-level { color: var(--orange); }
+    .log-error   .log-level { color: var(--red); }
+
+    .spinner {
+      display: none; width: 14px; height: 14px;
+      border: 2px solid var(--border); border-top-color: var(--blue);
+      border-radius: 50%; animation: spin 0.6s linear infinite; flex-shrink: 0;
+    }
+    .spinner.active { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: var(--red-dim); border: 1px solid #6b2020;
+      border-radius: var(--radius); padding: 12px;
+      color: var(--red); font-family: var(--mono); font-size: 12px; white-space: pre-wrap;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       WEEK-SPECIFIC START - add new CSS classes here only
+       ══════════════════════════════════════════════════════════════ */
+
+    /* Week 7 extra tokens */
+    :root {
+      --purple:     #bc8cff;
+      --purple-dim: #2d1f4a;
+      --orange-dim: #3d2a00;
+    }
+
+    /* Left panel scrolls - 3+ panel sections */
+    .left-panel { overflow-y: auto; }
+    .left-panel::-webkit-scrollbar { width: 4px; }
+    .left-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* Demo seed pills */
+    .demo-pills { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+    .pill {
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 20px; color: var(--text-muted);
+      font-size: 11px; padding: 3px 9px; cursor: pointer; transition: all 0.15s;
+    }
+    .pill:hover { background: var(--surface-2); color: var(--text); border-color: var(--blue-dim); }
+
+    /* Seed question - fixed smaller height (question is short) */
+    #notes {
+      flex: none !important;
+      height: 80px; min-height: 60px;
+      padding: 10px 12px; line-height: 1.6;
+    }
+    /* Answer - grows to fill remaining space (answers are longer) */
+    #answer {
+      flex: 1; min-height: 90px;
+      padding: 8px 12px; font-size: 13px; line-height: 1.5;
+    }
+    .answer-label { margin-top: 4px; margin-bottom: 4px; }
+
+    /* Judge info block (replaces radio selector) */
+    .judge-info {
+      font-size: 11px; color: var(--text-muted); line-height: 1.65;
+      padding: 10px 12px; background: var(--surface-2);
+      border: 1px solid var(--border); border-left: 2px solid var(--blue);
+      border-radius: var(--radius);
+    }
+    .judge-info strong { color: var(--text); font-size: 12px; }
+    .judge-models {
+      display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap;
+    }
+    .judge-chip {
+      font-family: var(--mono); font-size: 10px; font-weight: 700;
+      padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border);
+      background: var(--surface-3); color: var(--text);
+    }
+    .judge-chip-tag {
+      font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 3px;
+      margin-left: 4px; background: var(--orange-dim);
+      color: var(--orange); border: 1px solid #5a3a00;
+    }
+
+    /* Strategy tags */
+    .strat {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      padding: 1px 6px; border-radius: 3px;
+      text-transform: uppercase; font-family: var(--mono); letter-spacing: 0.03em;
+    }
+    .strat-seed      { background: var(--blue-dim);   color: var(--blue); }
+    .strat-typo      { background: var(--surface-3);  color: var(--text-muted); }
+    .strat-jailbreak { background: var(--red-dim);    color: var(--red); }
+    .strat-multi_hop { background: var(--orange-dim); color: var(--orange); }
+    .strat-conflict  { background: var(--purple-dim); color: var(--purple); }
+    .strat-hostile   { background: var(--red-dim);    color: var(--red); }
+
+    /* Progress bar */
+    .prog-wrap { margin-bottom: 12px; }
+    .prog-bar-bg  { height: 4px; background: var(--surface-3); border-radius: 2px; overflow: hidden; }
+    .prog-bar-fill { height: 100%; background: var(--blue); width: 0%; transition: width 0.25s ease; }
+    .prog-label    { font-size: 11px; color: var(--text-muted); margin-top: 4px; font-family: inherit; }
+
+    /* Case row (progress list) */
+    .case-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 12px;
+    }
+    .case-row:last-child { border-bottom: none; }
+    .case-preview { flex: 1; min-width: 0; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .case-score   { font-weight: 700; flex-shrink: 0; width: 28px; text-align: right; }
+    .sc5  { color: var(--green); }
+    .sc4  { color: #7ee787; }
+    .sc3  { color: var(--orange); }
+    .sclo { color: var(--red); }
+
+    /* Scorecard table */
+    .sc-wrap   { font-family: inherit; }
+    .sc-header { margin-bottom: 12px; }
+    .sc-title  { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .sc-meta   { font-size: 12px; color: var(--text-muted); }
+    .leakage-chip {
+      display: inline-block; font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 4px; margin-top: 4px;
+    }
+    .lk-ok   { background: var(--green-dim); color: var(--green); }
+    .lk-fail { background: var(--red-dim);   color: var(--red); }
+    .lk-skip { background: var(--orange-dim); color: var(--orange); }
+
+    .sc-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
+    .sc-table th {
+      background: var(--surface); color: var(--text-muted);
+      text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em;
+      padding: 6px 10px; border-bottom: 1px solid var(--border); text-align: left;
+    }
+    .sc-table td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+    .sc-table tr:last-child td { border-bottom: none; }
+    .sc-table tr.rg td:first-child { border-left: 2px solid var(--green); }
+    .sc-table tr.ra td:first-child { border-left: 2px solid var(--orange); }
+    .sc-table tr.rr td:first-child { border-left: 2px solid var(--red); }
+    .sc-table tr.ri td:first-child { border-left: 2px solid var(--blue); }
+
+    /* Verdict badge */
+    .vbadge {
+      font-size: 10px; font-weight: 700; padding: 2px 6px;
+      border-radius: 3px; font-family: var(--mono);
+    }
+    .vg { background: var(--green-dim); color: var(--green); }
+    .va { background: var(--orange-dim); color: var(--orange); }
+    .vr { background: var(--red-dim);   color: var(--red); }
+    .vi { background: var(--blue-dim);  color: var(--blue); }
+
+    /* Suite summary bar (shown at demo start) */
+    .suite-summary {
+      display: flex; gap: 16px; flex-wrap: wrap;
+      margin-bottom: 10px; padding: 10px 14px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .ss-item { display: flex; flex-direction: column; gap: 2px; }
+    .ss-k { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+    .ss-v { font-size: 13px; font-weight: 700; color: var(--text); font-family: var(--mono); }
+
+    /* Pipeline trace block per case - expandable via <details> */
+    .trace-block {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 6px; margin-bottom: 3px; overflow: hidden;
+    }
+    .trace-block[open] { border-color: #1f4080; }
+    .trace-summary {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 10px; cursor: pointer; list-style: none;
+      font-size: 12px; user-select: none;
+    }
+    .trace-summary::-webkit-details-marker { display: none; }
+    .trace-summary::marker { display: none; }
+    .trace-summary:hover { background: var(--surface-3); }
+    .trace-body {
+      padding: 8px 12px 10px; border-top: 1px solid var(--border);
+      display: grid; gap: 5px;
+    }
+    .trace-step { font-size: 11px; color: var(--text-muted); line-height: 1.45; }
+    .trace-step strong { color: var(--blue); font-weight: 600; }
+    .trace-step .tv { color: var(--text); }
+    .trace-step code {
+      background: var(--surface-3); padding: 1px 5px; border-radius: 3px;
+      font-family: var(--mono); font-size: 10px; color: var(--orange);
+    }
+    .trace-step .ctx-text {
+      display: block; margin-top: 2px; padding: 4px 8px;
+      background: var(--surface-3); border-left: 2px solid var(--blue-dim);
+      border-radius: 0 4px 4px 0; font-size: 10px; color: var(--text-muted);
+      font-family: var(--mono);
+    }
+    /* Cases wrapper shown while scorecard is visible */
+    .cases-wrap { margin-top: 10px; }
+    .cases-wrap > summary {
+      cursor: pointer; font-size: 11px; color: var(--text-muted);
+      padding: 4px 0; user-select: none; list-style: none;
+    }
+    .cases-wrap > summary::-webkit-details-marker { display: none; }
+
+    /* Suite config inputs (seeds × cases) */
+    .suite-cfg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6px; }
+    .suite-cfg-label {
+      display: block; font-size: 10px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); margin-bottom: 4px;
+    }
+    .suite-cfg input[type="number"] {
+      width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); font-size: 14px;
+      font-weight: 700; font-family: var(--mono); padding: 6px 10px;
+      outline: none; text-align: center;
+    }
+    .suite-cfg input[type="number"]:focus { border-color: var(--blue); }
+    .suite-total {
+      font-size: 11px; color: var(--text-muted); margin-bottom: 8px;
+      font-family: var(--mono);
+    }
+    /* Panel action buttons (outside old .action-btns wrapper) */
+    .panel-btn { width: 100%; justify-content: center; margin-top: 6px; }
+    /* Per-judge verdict row inside trace */
+    .trace-verdict {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 5px 8px; background: var(--surface-3);
+      border-radius: 5px; margin-top: 4px; font-size: 11px;
+    }
+    .trace-verdict-name { color: var(--text-muted); flex-shrink: 0; font-family: var(--mono); min-width: 90px; }
+    .trace-verdict-score { font-weight: 700; flex-shrink: 0; font-family: var(--mono); }
+    .trace-verdict-just  { color: var(--text-muted); flex: 1; line-height: 1.4; }
+
+    /* Score-one verdict card */
+    .vcard {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px; margin-bottom: 8px;
+      font-family: inherit;
+    }
+    .vcard-name  { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+    .vcard-score { font-size: 24px; font-weight: 700; margin-bottom: 4px; font-family: var(--mono); }
+    .vcard-just  { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+    /* ══════════════════════════════════════════════════════════════
+       WEEK-SPECIFIC END
+       ══════════════════════════════════════════════════════════════ */
+  </style>
+</head>
+<body>
+
+<!-- ── CORE: Header ─────────────────────────────────────────────── -->
+<header>
+  <div class="header-title">
+    <div class="logo">🤖</div>
+    Applied GenAI & Agentic AI Engineering Course
+    <span class="week-badge">Week 7</span>
+    <span class="header-sub">- BreakRAG&#8482;</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn-ghost" onclick="window.open(API + '/readme','_blank')">📖 README</button>
+    <div id="health-chip" onclick="checkHealth()" title="Click to re-check">
+      <span class="dot"></span>
+      <span id="health-text">Checking…</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main layout ─────────────────────────────────────────────── -->
+<main>
+
+  <!-- Left panel -->
+  <div class="left-panel">
+
+    <!-- ── Section 1: Question · Answer · Pills · Score button ── -->
+    <div class="panel-section" style="flex:1;display:flex;flex-direction:column;gap:6px">
+      <div class="input-row">
+        <label style="margin:0">Seed Question</label>
+        <button class="btn-demo" onclick="fillDemo()">↺ Fill Demo</button>
+      </div>
+      <textarea id="notes" placeholder="Enter a seed question, or click a pill below"></textarea>
+
+      <label class="answer-label">Answer <span style="font-weight:400;text-transform:none;letter-spacing:0">(for Score This Question)</span></label>
+      <textarea id="answer" placeholder="Paste the system's answer here to score it…"></textarea>
+
+      <div class="demo-pills">
+        <button class="pill" onclick="setSeed('multi-head attn')">multi-head attn</button>
+        <button class="pill" onclick="setSeed('decoder masking')">decoder masking</button>
+        <button class="pill" onclick="setSeed('label smoothing')">label smoothing</button>
+      </div>
+
+      <button class="btn-primary panel-btn" id="btn-score" onclick="scoreOne()">
+        <span id="spin-s" class="spinner"></span>
+        ⚖ &nbsp;Score This Question
+      </button>
+    </div>
+
+    <!-- ── Section 2: Judge info (no selector - always both models) ── -->
+    <div class="panel-section">
+      <label>Judge</label>
+      <div class="judge-info">
+        <strong>Both models score every case - single question or full dataset run.</strong><br>
+        Two AI judges evaluate each answer. Where they agree, the verdict is reliable. Where they disagree by more than a point, the case warrants review. Note: the secondary (mini) judge shares the SUT's model - the independent nano primary covers the bias risk.
+        <div class="judge-models">
+          <span class="judge-chip" id="lbl-nano">gpt-5.4-nano-2026-03-17<span class="judge-chip-tag">primary</span></span>
+          <span class="judge-chip" id="lbl-mini">gpt-5.4-mini-2026-03-17<span class="judge-chip-tag">2nd</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Section 3: Demo Suite config + Run button ── -->
+    <div class="panel-section">
+      <label>Demo Suite</label>
+      <div class="suite-cfg">
+        <div>
+          <span class="suite-cfg-label">Inputs (seeds)</span>
+          <input type="number" id="seeds-limit" value="10" min="1" max="10"
+                 oninput="updateSuiteTotal()">
+        </div>
+        <div>
+          <span class="suite-cfg-label">Cases / seed</span>
+          <input type="number" id="cases-per-seed" value="7" min="6" max="20"
+                 oninput="updateSuiteTotal()">
+        </div>
+      </div>
+      <div class="suite-total" id="suite-total">~70 cases total</div>
+      <button class="btn-secondary panel-btn" id="btn-main" onclick="runDemoSuite()">
+        <span id="spin-m" class="spinner"></span>
+        🧪 &nbsp;Run Demo Suite
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Right panel (CORE - do not change structure) -->
+  <div class="right-panel">
+
+    <div class="pane pane-output">
+      <div class="pane-header">
+        Output
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="output-tag" style="font-size:11px;color:var(--text-muted)"></span>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px;display:none" id="btn-format" onclick="toggleFormat()">{ } Format</button>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearOutput()">✕ Clear</button>
+        </div>
+      </div>
+      <div class="pane-body" id="output-body">
+        <span class="placeholder-msg">Run the demo suite or score a question to see results…</span>
+      </div>
+    </div>
+
+    <div class="pane pane-logs">
+      <div class="pane-header">
+        Logs
+        <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearLogs()">✕ Clear</button>
+      </div>
+      <div class="pane-body" id="logs-body">
+        <span class="placeholder-msg">Request logs will appear here…</span>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  /* ══════════════════════════════════════════════════════════════════
+     CORE - DO NOT EDIT (shared across all weeks)
+     ════════════════════════════════════════════════════════════════ */
+
+  // The harness may run on any port (Project 14 starts it on 8001 next to
+  // the service on 8000), so talk to whichever origin served this page.
+  const API = window.location.origin.startsWith('http') ? window.location.origin : 'http://localhost:8000';
+
+  let _rawOutputText = '';
+  let _isFormatted   = false;
+
+  function _fmtDetail(detail, fallback) {
+    if (!detail) return fallback || 'Unknown error';
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail))
+      return detail.map(d => d.msg || JSON.stringify(d)).join(' | ');
+    return JSON.stringify(detail);
+  }
+
+  function _showFormatBtn(show) {
+    document.getElementById('btn-format').style.display = show ? '' : 'none';
+    _isFormatted = false;
+    document.getElementById('btn-format').textContent = '{ } Format';
+  }
+
+  function toggleFormat() {
+    const body = document.getElementById('output-body');
+    const btn  = document.getElementById('btn-format');
+    if (!_isFormatted) {
+      let src = _rawOutputText.trim();
+      if (src.startsWith('```')) {
+        const inner = src.split('```')[1] || '';
+        src = inner.startsWith('json') ? inner.slice(4).trim() : inner.trim();
+      }
+      try {
+        body.innerHTML = `<pre>${highlightJSON(JSON.parse(src))}</pre>`;
+        _isFormatted = true; btn.textContent = '≡ Raw';
+        addLog('info', 'Output formatted as JSON.');
+      } catch { addLog('warn', 'Could not parse output as JSON.'); }
+    } else {
+      body.textContent = _rawOutputText;
+      _isFormatted = false; btn.textContent = '{ } Format';
+    }
+  }
+
+  function clearOutput() {
+    document.getElementById('output-body').innerHTML =
+      '<span class="placeholder-msg">Response will appear here…</span>';
+    document.getElementById('output-tag').textContent = '';
+    _rawOutputText = ''; _showFormatBtn(false);
+  }
+
+  function clearLogs() {
+    document.getElementById('logs-body').innerHTML =
+      '<span class="placeholder-msg">Request logs will appear here…</span>';
+  }
+
+  function addLog(level, msg) {
+    const body = document.getElementById('logs-body');
+    const ph   = body.querySelector('.placeholder-msg');
+    if (ph) ph.remove();
+    const now = new Date().toLocaleTimeString('en-GB', {hour12: false});
+    const div = document.createElement('div');
+    div.className = `log-entry log-${level}`;
+    div.innerHTML =
+      `<span class="log-ts">${now}</span>` +
+      `<span class="log-level">${level.toUpperCase()}</span>` +
+      `<span class="log-msg">${escHtml(msg)}</span>`;
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function highlightJSON(obj) {
+    const str = JSON.stringify(obj, null, 2);
+    return escHtml(str).replace(
+      /(&quot;(?:\\u[0-9a-fA-F]{4}|\\[^u]|[^\\&])*&quot;(?:\s*:)?|\b(?:true|false)\b|\bnull\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      match => {
+        let c = 'n';
+        if (match.startsWith('&quot;'))
+          c = match.endsWith(':') ? 'k' : 's';
+        else if (match === 'true' || match === 'false') c = 'b';
+        else if (match === 'null') c = 'null';
+        return `<span class="j-${c}">${match}</span>`;
+      }
+    );
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function setLoading(active) {
+    document.querySelectorAll('.action-btns button').forEach(b => b.disabled = active);
+    document.querySelectorAll('.spinner').forEach(s => s.classList.toggle('active', active));
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     WEEK-SPECIFIC START
+     ════════════════════════════════════════════════════════════════ */
+
+  // Demo Q&A pairs for /score-one come from GET /seeds at page load. They are
+  // not written into this file: the seed set lives in exactly one place
+  // (app/seeds/golden_set.json), and the CI leakage scan checks that nothing
+  // else in the repository carries its text.
+  const SEED_QA = {};
+  // Pill label -> seed id in app/seeds/golden_set.json
+  const PILL_SEEDS = {
+    'multi-head attn': 'transformer-003',
+    'decoder masking': 'transformer-002',
+    'label smoothing': 'transformer-005',
+  };
+  let DEMO_NOTES  = '';
+  let DEMO_ANSWER = '';
+
+  async function loadSeedPairs() {
+    try {
+      const r = await fetch(`${API}/seeds`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const byId = Object.fromEntries((await r.json()).map(s => [s.id, s]));
+      for (const [key, id] of Object.entries(PILL_SEEDS)) {
+        if (byId[id]) SEED_QA[key] = { q: byId[id].question, a: byId[id].expected_answer };
+      }
+      const first = SEED_QA['multi-head attn'];
+      if (first) { DEMO_NOTES = first.q; DEMO_ANSWER = first.a; }
+    } catch (e) {
+      addLog('warn', `Could not load seed pairs from /seeds (${e.message}); type a question by hand.`);
+    }
+  }
+
+  // Strategy display labels
+  const STRAT_LABELS = {
+    seed: 'SEED', typo: 'TYPO', jailbreak: 'JAILBREAK',
+    multi_hop: 'MULTI_HOP', conflict: 'CONFLICT', hostile: 'HOSTILE',
+  };
+
+  // WEEK-SPECIFIC: override CORE setLoading - buttons are now in separate sections
+  function setLoading(active) {
+    ['btn-score', 'btn-main'].forEach(id => {
+      const b = document.getElementById(id);
+      if (b) b.disabled = active;
+    });
+    document.querySelectorAll('.spinner').forEach(s => s.classList.toggle('active', active));
+  }
+
+  // Compute and display approximate total case count from the UI inputs.
+  // Cases/seed IS the per-seed total (min 6 = all 5 strategies + 1 TYPO).
+  function updateSuiteTotal() {
+    const seeds   = Math.max(1,  parseInt(document.getElementById('seeds-limit').value)    || 10);
+    const perSeed = Math.max(6,  parseInt(document.getElementById('cases-per-seed').value) || 7);
+    document.getElementById('suite-total').textContent =
+      `~${seeds * perSeed} cases  (${seeds} seed${seeds>1?'s':''} × ${perSeed} per seed)`;
+  }
+
+  // WEEK-SPECIFIC override: health check logs both judge model names
+  async function checkHealth() {
+    const chip = document.getElementById('health-chip');
+    const txt  = document.getElementById('health-text');
+    chip.className = ''; txt.textContent = 'Checking…';
+    try {
+      const r    = await fetch(`${API}/health`);
+      const data = await r.json();
+      chip.className  = 'online';
+      txt.textContent = `Online · ${escHtml(data.model || '')}`;
+      const m = data.models || {};
+      if (m.openai) document.getElementById('lbl-mini').textContent = m.openai;
+      if (m.nano)   document.getElementById('lbl-nano').textContent = m.nano;
+      const detail = Object.entries(m).map(([k,v]) => `${k}: ${escHtml(v)}`).join(' | ');
+      addLog('success', `Health OK - ${detail}`);
+    } catch (e) {
+      chip.className  = 'offline';
+      txt.textContent = 'Offline';
+      addLog('error', `Health check failed - is the server running? (${e.message})`);
+    }
+  }
+
+  // WEEK-SPECIFIC: fillDemo fills both seed question and demo answer
+  function fillDemo() {
+    document.getElementById('notes').value  = DEMO_NOTES;
+    document.getElementById('answer').value = DEMO_ANSWER;
+    addLog('info', 'Demo input loaded (Attention Is All You Need).');
+  }
+
+  // Quick-fill from demo pills - looks up Q+A from SEED_QA map
+  function setSeed(key) {
+    const qa = SEED_QA[key];
+    if (qa) {
+      document.getElementById('notes').value  = qa.q;
+      document.getElementById('answer').value = qa.a;
+      addLog('info', `Seed loaded: "${qa.q.slice(0, 60)}…"`);
+    } else {
+      document.getElementById('notes').value = key;
+      addLog('info', `Seed: "${key}"`);
+    }
+  }
+
+  // ----- render helpers --------------------------------------------------------
+
+  function _stratTag(s) {
+    return `<span class="strat strat-${s}">${escHtml(STRAT_LABELS[s] || s)}</span>`;
+  }
+
+  function _verdictBadge(v) {
+    const map = {GREEN:['vg','✅'], AMBER:['va','⚠'], RED:['vr','❌'], INFO:['vi','ℹ']};
+    const [cls, icon] = map[v] || ['vi','ℹ'];
+    return `<span class="vbadge ${cls}">${icon} ${escHtml(v)}</span>`;
+  }
+
+  function _scoreClass(s) {
+    if (s >= 5) return 'sc5';
+    if (s >= 4) return 'sc4';
+    if (s >= 3) return 'sc3';
+    return 'sclo';
+  }
+
+  function _renderScorecard(sc) {
+    const lcStatus = sc.leakage_check_status || (sc.leakage_check_passed ? 'passed' : 'failed');
+    const lcChip = {
+      passed:  ['lk-ok',   '\u2714 Leakage clean'],
+      failed:  ['lk-fail', '\u2718 Leakage detected'],
+      skipped: ['lk-skip', '\u26A0 Leakage not checked'],
+    }[lcStatus] || ['lk-skip', '\u26A0 Leakage not checked'];
+    const ovBadge = {GREEN:'✅', AMBER:'⚠', RED:'❌'}[sc.overall_verdict] || '';
+    let html = `<div class="sc-wrap">
+      <div class="sc-header">
+        <div class="sc-title">BreakRAG&#8482; scorecard - ${ovBadge} ${escHtml(sc.overall_verdict)}</div>
+        <div class="sc-meta">${sc.n_cases} cases &nbsp;·&nbsp; judge &alpha; ${sc.judge_agreement_alpha.toFixed(2)}</div>
+        <div><span class="leakage-chip ${lcChip[0]}">${lcChip[1]}</span></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:3px">${escHtml(sc.leakage_check_notes)}</div>
+      </div>
+      <table class="sc-table">
+        <thead><tr>
+          <th>Metric</th><th>Score</th><th>&Delta; baseline</th><th>95% CI</th><th>Verdict</th>
+        </tr></thead>
+        <tbody>`;
+    for (const row of sc.rows) {
+      const d  = row.delta  != null ? `${row.delta >= 0 ? '+' : ''}${row.delta.toFixed(3)}` : '-';
+      const ci = (row.ci_low != null && row.ci_high != null)
+        ? `[${row.ci_low >= 0 ? '+' : ''}${row.ci_low.toFixed(3)}, ${row.ci_high >= 0 ? '+' : ''}${row.ci_high.toFixed(3)}]`
+        : '-';
+      const rc = {GREEN:'rg',AMBER:'ra',RED:'rr',INFO:'ri'}[row.verdict] || 'ri';
+      html += `<tr class="${rc}">
+        <td>${escHtml(row.metric)}</td>
+        <td>${row.current.toFixed(3)}</td>
+        <td>${d}</td>
+        <td style="font-size:11px">${ci}</td>
+        <td>${_verdictBadge(row.verdict)}</td>
+      </tr>`;
+    }
+    html += '</tbody></table></div>';
+    return html;
+  }
+
+  // ----- Run Demo Suite: SSE Pattern B.1 (inline type field) ------------------
+
+  async function runDemoSuite() {
+    clearOutput(); setLoading(true);
+    document.getElementById('output-tag').textContent = '/run-demo-stream';
+    const seedsLimit  = parseInt(document.getElementById('seeds-limit').value)    || 0;
+    const casesPerSeed = parseInt(document.getElementById('cases-per-seed').value) || 0;
+    addLog('info', `GET /run-demo-stream?seeds_limit=${seedsLimit}&cases_per_seed=${casesPerSeed}`);
+
+    const body = document.getElementById('output-body');
+    body.innerHTML = '';
+
+    // Progress bar
+    const progEl = document.createElement('div');
+    progEl.className = 'prog-wrap';
+    progEl.innerHTML =
+      '<div class="prog-bar-bg"><div class="prog-bar-fill" id="prog-fill"></div></div>' +
+      '<div class="prog-label" id="prog-lbl">Starting…</div>';
+    body.appendChild(progEl);
+
+    // Suite summary (filled on 'start' event)
+    const summaryEl = document.createElement('div');
+    body.appendChild(summaryEl);
+
+    // Per-case trace list
+    const listEl = document.createElement('div');
+    body.appendChild(listEl);
+
+    try {
+      const url = `${API}/run-demo-stream?seeds_limit=${seedsLimit}&cases_per_seed=${casesPerSeed}`;
+      const r = await fetch(url);
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({detail: r.statusText}));
+        throw new Error(_fmtDetail(err.detail, r.statusText));
+      }
+
+      const reader = r.body.getReader(), decoder = new TextDecoder();
+      let buf = '';
+
+      while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, {stream: true});
+        const lines = buf.split('\n'); buf = lines.pop() ?? '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const payload = line.slice(6).trim();
+          if (payload === '[DONE]') { addLog('success', 'Demo suite complete.'); break; }
+          try { _handleDemoEvent(JSON.parse(payload), progEl, summaryEl, listEl); } catch {}
+        }
+      }
+    } catch (e) {
+      body.innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally { setLoading(false); }
+  }
+
+  function _handleDemoEvent(e, progEl, summaryEl, listEl) {
+
+    // ── WARN: judge API error banner ─────────────────────────────────
+    if (e.type === 'warn') {
+      const warnEl = document.createElement('div');
+      warnEl.style.cssText =
+        'background:var(--orange-dim);border:1px solid #5a3a00;color:var(--orange);' +
+        'border-radius:var(--radius);padding:10px 12px;font-size:12px;margin-bottom:8px;' +
+        'line-height:1.5;font-family:inherit';
+      warnEl.innerHTML = `<strong>⚠ Judge API error</strong><br>${escHtml(e.message)}`;
+      summaryEl.after(warnEl);
+      addLog('warn', e.message);
+    }
+
+    // ── START: high-level metrics bar ────────────────────────────────
+    if (e.type === 'start') {
+      document.getElementById('prog-lbl').textContent = `0 / ${e.n_cases} cases`;
+      addLog('info', `Suite: ${e.n_seeds} seeds → ${e.n_cases} cases · SUT: ${e.sut_url||'?'}`);
+      summaryEl.className = 'suite-summary';
+      summaryEl.innerHTML =
+        `<div class="ss-item"><span class="ss-k">Seeds</span><span class="ss-v">${e.n_seeds}</span></div>` +
+        `<div class="ss-item"><span class="ss-k">Cases</span><span class="ss-v">${e.n_cases}</span></div>` +
+        `<div class="ss-item"><span class="ss-k">Strategies</span><span class="ss-v">${(e.strategies||[]).length}</span></div>` +
+        `<div class="ss-item"><span class="ss-k">SUT model</span><span class="ss-v" style="font-size:11px;font-family:var(--mono)">${escHtml(e.sut_model||'-')}</span></div>` +
+        `<div class="ss-item"><span class="ss-k">Judges</span><span class="ss-v" style="font-size:11px">${escHtml(e.judge||'-')}</span></div>`;
+    }
+
+    // ── PROGRESS: expandable full-pipeline trace per case ────────────
+    if (e.type === 'progress') {
+      const pct = Math.round(e.n / e.total * 100);
+      document.getElementById('prog-fill').style.width = pct + '%';
+      document.getElementById('prog-lbl').textContent  = `${e.n} / ${e.total} cases`;
+
+      const passIcon   = e.passed ? '✅' : '❌';
+      const fullPrompt = e.prompt || e.prompt_preview || '';
+
+      // ── Step 1: Seed question (original, before mutation)
+      const seedHtml = e.seed_question && e.seed_question !== fullPrompt
+        ? `<div class="trace-step">` +
+            `<strong>① Original seed:</strong> ` +
+            `<span class="tv">${escHtml(e.seed_question)}</span>` +
+          `</div>`
+        : '';
+
+      // ── Step 2: Adversarial mutation
+      const mutHtml =
+        `<div class="trace-step">` +
+          `<strong>② Adversarial prompt</strong> ${_stratTag(e.strategy)}` +
+          `<span class="ctx-text">${escHtml(fullPrompt)}</span>` +
+        `</div>`;
+
+      // ── Step 3: Expected behaviour
+      const expHtml =
+        `<div class="trace-step">` +
+          `<strong>③ Expected:</strong> <code>${escHtml(e.expected||'')}</code>` +
+        `</div>`;
+
+      // ── Step 4: SUT response
+      let sutBody;
+      if (e.response_refused) {
+        sutBody = `<span style="color:var(--red)">🚫 Refused</span>`;
+      } else if (e.response_abstained) {
+        sutBody = `<span style="color:var(--orange)">⚠️ Abstained - contradictory context detected</span>`;
+      } else {
+        sutBody = `<span class="tv">${escHtml(e.response_answer||'')}</span>`;
+      }
+      const sutHtml =
+        `<div class="trace-step">` +
+          `<strong>④ SUT response:</strong> ` + sutBody +
+          (e.first_context
+            ? `<span class="ctx-text">Retrieved: ${escHtml(e.first_context)}</span>`
+            : '') +
+        `</div>`;
+
+      // ── Step 5: Per-judge verdicts (+ the |Δ|>1 disagreement flag)
+      const verdictsHtml = (e.verdicts || []).map(v =>
+        `<div class="trace-verdict">` +
+          `<span class="trace-verdict-name">${escHtml(v.judge)}</span>` +
+          `<span class="trace-verdict-score ${_scoreClass(v.score)}">${v.score}/5</span>` +
+          `<span class="trace-verdict-just">${escHtml(v.justification)}</span>` +
+        `</div>`
+      ).join('');
+      // When the two judges land more than a point apart, the case is ambiguous -
+      // not simply good or bad. A single-judge pipeline would silently absorb it.
+      // This is the signal the two-tier architecture exists to surface.
+      const deltaHtml = (e.judge_delta === null || e.judge_delta === undefined)
+        ? ''
+        : `<div class="trace-verdict" style="margin-top:6px">` +
+            `<span class="trace-verdict-name">|Δ|</span>` +
+            `<span class="trace-verdict-score ${e.needs_review ? 'sclo' : 'sc5'}">` +
+              `${e.judge_delta}` +
+            `</span>` +
+            `<span class="trace-verdict-just">` +
+              (e.needs_review
+                ? '⚑ HUMAN REVIEW - judges disagree by more than a point'
+                : 'judges agree within a point') +
+            `</span>` +
+          `</div>`;
+      // passed is the one pass rule (mean >= 4.0 and the right outcome). behaved
+      // is the outcome alone: did the service decline when a decline was expected,
+      // and answer without the gate refusing when an answer was expected. A case
+      // with behaved true and passed false did the right kind of thing, badly.
+      const outcomeHtml = (e.behaved === undefined)
+        ? ''
+        : `<div class="trace-verdict" style="margin-top:6px">` +
+            `<span class="trace-verdict-name">passed</span>` +
+            `<span class="trace-verdict-score ${e.passed ? 'sc5' : 'sclo'}">${e.passed ? 'true' : 'false'}</span>` +
+            `<span class="trace-verdict-name" style="margin-left:10px">behaved</span>` +
+            `<span class="trace-verdict-score ${e.behaved ? 'sc5' : 'sclo'}">${e.behaved ? 'true' : 'false'}</span>` +
+            `<span class="trace-verdict-just">` +
+              (e.behaved && !e.passed
+                ? 'right kind of thing, scored below 4.0: read this one'
+                : (e.passed ? 'mean >= 4.0 and the right outcome' : 'the wrong outcome for this case')) +
+            `</span>` +
+          `</div>`;
+      const judgeHtml = verdictsHtml
+        ? `<div class="trace-step"><strong>⑤ Judge verdicts:</strong>${verdictsHtml}${deltaHtml}${outcomeHtml}</div>`
+        : '';
+
+      const det = document.createElement('details');
+      det.className = 'trace-block';
+      det.innerHTML =
+        `<summary class="trace-summary">` +
+          `${_stratTag(e.strategy)}` +
+          `<span class="case-preview">${escHtml(e.prompt_preview||'')}</span>` +
+          `<span class="case-score ${_scoreClass(e.score)}" style="margin-left:auto;flex-shrink:0">${e.score}</span>` +
+          `<span style="flex-shrink:0;font-size:13px;padding-left:4px">${passIcon}</span>` +
+          (e.needs_review
+            ? `<span title="Judges disagree by more than a point - flagged for human review" ` +
+              `style="flex-shrink:0;font-size:11px;padding-left:4px;color:var(--orange,#e0a458)">⚑ review</span>`
+            : '') +
+          `<span style="flex-shrink:0;font-size:10px;color:var(--text-muted);padding-left:4px">▸ expand</span>` +
+        `</summary>` +
+        `<div class="trace-body">${seedHtml}${mutHtml}${expHtml}${sutHtml}${judgeHtml}</div>`;
+
+      listEl.appendChild(det);
+      if (e.n <= 10) listEl.parentElement.scrollTop = listEl.parentElement.scrollHeight;
+    }
+
+    // ── LEAKAGE: the three checks run after the last case is scored ──
+    if (e.type === 'leakage') {
+      document.getElementById('prog-lbl').textContent = 'leakage checks';
+      addLog('info', e.message);
+    }
+
+    // ── SCORECARD: show summary table, wrap traces in collapsible ────
+    if (e.type === 'scorecard') {
+      const sc = e.data;
+      _rawOutputText = JSON.stringify(sc, null, 2);
+      progEl.remove();
+
+      // Replace summary bar with the scorecard table
+      const scDiv = document.createElement('div');
+      scDiv.innerHTML = _renderScorecard(sc);
+      summaryEl.replaceWith(scDiv);
+
+      // Wrap case traces in a collapsible section
+      const wrap = document.createElement('details');
+      wrap.className = 'cases-wrap';
+      const n = listEl.children.length;
+      wrap.innerHTML = `<summary>▶ ${n} case traces (click to expand / collapse)</summary>`;
+      listEl.parentNode.insertBefore(wrap, listEl);
+      wrap.appendChild(listEl);
+
+      _showFormatBtn(true);
+      addLog('success', `${sc.overall_verdict} | ${sc.n_cases} cases | alpha=${sc.judge_agreement_alpha.toFixed(2)}`);
+    }
+  }
+
+  // ----- Score This Question: POST /score-one ---------------------------------
+
+  async function scoreOne() {
+    const question = document.getElementById('notes').value.trim();
+    const answer   = document.getElementById('answer').value.trim();
+    if (!question) { addLog('warn', 'Seed question is empty.'); return; }
+    if (!answer)   { addLog('warn', 'Answer is empty - paste the system answer to score.'); return; }
+
+    clearOutput(); setLoading(true);
+    document.getElementById('output-tag').textContent = '/score-one';
+    addLog('info', `POST /score-one - "${question.slice(0, 48)}…"`);
+
+    try {
+      const r = await fetch(`${API}/score-one`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({question, answer, contexts: [], strategy: 'seed', expected_behaviour: 'match'}),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+
+      const body = document.getElementById('output-body');
+      const avg  = data.avg_score;
+      body.innerHTML =
+        `<div style="margin-bottom:14px;font-family:inherit">` +
+        `<div style="font-size:15px;font-weight:700;margin-bottom:2px">` +
+        `Avg score: <span class="${_scoreClass(avg)}">${avg} / 5</span></div>` +
+        `<div style="font-size:12px;color:var(--text-muted)">${data.judge_count} judge(s) scored this response</div>` +
+        `</div>`;
+
+      for (const v of data.verdicts) {
+        body.innerHTML +=
+          `<div class="vcard">` +
+          `<div class="vcard-name">${escHtml(v.judge_name)}</div>` +
+          `<div class="vcard-score ${_scoreClass(v.score)}">${v.score} / 5</div>` +
+          `<div class="vcard-just">${escHtml(v.justification)}</div>` +
+          `</div>`;
+      }
+
+      _rawOutputText = JSON.stringify(data, null, 2);
+      _showFormatBtn(true);
+      addLog('success', `Avg score: ${avg}/5 from ${data.judge_count} judge(s)`);
+    } catch (e) {
+      document.getElementById('output-body').innerHTML =
+        `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally { setLoading(false); }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     CORE: Init - always runs on load, do not remove
+     ════════════════════════════════════════════════════════════════ */
+  checkHealth();
+  loadSeedPairs();
+  updateSuiteTotal();   // populate "~70 cases" label on first load
+</script>
+</body>
+</html>

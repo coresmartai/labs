@@ -1,0 +1,90 @@
+# Project 14 RAGBench: the guard on every push and pull request.
+#
+# Copy this file to .github/workflows/ at the ROOT of your cohort repository.
+# GitHub reads workflows from there and nowhere else. If your harness lives
+# anywhere other than project-14-ragbench/harness, change HARNESS_DIR.
+#
+# One job, free to run: install the harness, run its offline suite (the
+# shipped tests plus yours), then scan every text file in the repository for
+# your seed questions, expected answers and canary strings. The seed file and
+# results/ are the only places that text may live. A hit fails the pull
+# request, which is the workflow doing its job.
+#
+# The live loop (a real run against your service inside this workflow) is not
+# part of Project 14. It needs a hosted Qdrant, your service started in the
+# runner, and two secrets. The scorecard you commit comes from a local run.
+
+name: week-07-ragbench
+
+on:
+  push:
+    branches: [main, week-07-ragbench]
+  pull_request:
+
+env:
+  PYTHON_VERSION: "3.11"
+  HARNESS_DIR: project-14-ragbench/harness
+
+concurrency:
+  group: ragbench-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install the harness
+        working-directory: ${{ env.HARNESS_DIR }}
+        run: pip install -r requirements.txt
+
+      - name: Offline suite (shipped tests plus yours)
+        working-directory: ${{ env.HARNESS_DIR }}
+        run: pytest -q
+
+      - name: Repository leakage scan
+        working-directory: ${{ env.HARNESS_DIR }}
+        run: |
+          python - <<'PY'
+          import os
+          import sys
+          from pathlib import Path
+          from app.adversarial import load_seeds
+          from app.scorecard import ngram_leakage_check
+
+          seeds = load_seeds()
+          root = Path(os.environ.get("GITHUB_WORKSPACE", "../..")).resolve()
+          here = Path(".").resolve()
+          seed_file = (here / "app/seeds/golden_set.json").resolve()
+          results_dir = (here / "../results").resolve()
+          exts = {".md", ".py", ".ipynb", ".html", ".txt", ".yml", ".yaml", ".json",
+                  ".csv", ".svg", ".toml", ".cfg", ".ini", ".rst"}
+          skip_dirs = {".git", ".venv", "venv", "node_modules", "runs", "__pycache__"}
+          files = []
+          for p in root.rglob("*"):
+              if p.suffix not in exts or not p.is_file():
+                  continue
+              rp = p.resolve()
+              if skip_dirs & set(p.parts):
+                  continue
+              if rp == seed_file or results_dir in rp.parents:
+                  continue
+              files.append(p)
+          haystack = "\n".join(p.read_text(errors="ignore") for p in files)
+          ok, notes = ngram_leakage_check(seeds, haystack)
+          print(f"n-gram scan of {len(files)} repository files: {notes}")
+          hits = [s.id for s in seeds if s.canary and s.canary in haystack]
+          print("canary scan: " + (f"FOUND in repository for {hits}" if hits else "clean"))
+          if not ok or hits:
+              print("seed text or a canary is in a file other than the seed file and results/.")
+              print("Describe cases by id in the README and take the text out.")
+          sys.exit(0 if ok and not hits else 1)
+          PY

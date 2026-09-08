@@ -1,0 +1,29 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Your corpus never goes in the repository: not the documents, not the index,
+# not the snapshot the leakage checks read.
+qdrant_local/
+harness/runs/
+runs/
+*.snapshot.json
+corpus_snapshot.json
+
+# Scratch runs and scorecards. The two files a reviewer needs are
+# results/run.json and harness/scorecards/last.md, which are NOT ignored.
+harness/scorecards/*
+!harness/scorecards/last.md
+
+# IDE
+.vscode/
+.idea/
+.DS_Store

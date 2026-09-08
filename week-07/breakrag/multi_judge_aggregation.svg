@@ -1,0 +1,107 @@
+<svg viewBox="0 0 1200 760" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F8FAFC"/>
+      <stop offset="100%" stop-color="#EEF2FF"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+      <feOffset dx="0" dy="3" result="off"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="760" fill="url(#bg)"/>
+
+  <text x="600" y="46" text-anchor="middle" font-size="26" font-weight="700" fill="#0F172A">Two-Tier Judge Aggregation - Mini + Nano, Three Signals</text>
+  <text x="600" y="72" text-anchor="middle" font-size="14" fill="#64748B">Single-judge pipelines hide model-tier bias. Mini + Nano on the same rubric surfaces size-tier disagreement explicitly.</text>
+
+  <!-- Two judges on the left -->
+  <g filter="url(#shadow)">
+    <rect x="60" y="190" width="240" height="120" rx="16" fill="#FFFBEB" stroke="#F59E0B" stroke-width="2"/>
+    <circle cx="100" cy="240" r="26" fill="#F59E0B"/>
+    <text x="100" y="248" text-anchor="middle" font-size="18" font-weight="700" fill="#FFFFFF">N</text>
+    <text x="130" y="225" font-size="14" font-weight="700" fill="#451A03">OpenAIJudgeNano</text>
+    <text x="130" y="245" font-size="11" fill="#475569">gpt-5.4-nano-2026-03-17</text>
+    <text x="130" y="261" font-size="10" fill="#475569" font-style="italic">primary · fast tier</text>
+    <text x="130" y="276" font-size="10" fill="#475569" font-style="italic">independent of the SUT model</text>
+    <text x="130" y="294" font-size="10" fill="#94A3B8">app/judges.py::OpenAIJudgeNano</text>
+
+    <rect x="60" y="340" width="240" height="120" rx="16" fill="#EEF2FF" stroke="#4F46E5" stroke-width="2"/>
+    <circle cx="100" cy="390" r="26" fill="#4F46E5"/>
+    <text x="100" y="398" text-anchor="middle" font-size="18" font-weight="700" fill="#FFFFFF">M</text>
+    <text x="130" y="375" font-size="14" font-weight="700" fill="#1E1B4B">OpenAIJudge</text>
+    <text x="130" y="395" font-size="11" fill="#475569">gpt-5.4-mini-2026-03-17</text>
+    <text x="130" y="411" font-size="10" fill="#475569" font-style="italic">secondary · full reasoning</text>
+    <text x="130" y="426" font-size="10" fill="#475569" font-style="italic">shares SUT model - caveat covered by Δ&gt;1 flag</text>
+    <text x="130" y="444" font-size="10" fill="#94A3B8">app/judges.py::OpenAIJudge</text>
+  </g>
+
+  <text x="180" y="490" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">Two judges, one Judge Protocol</text>
+  <text x="180" y="506" text-anchor="middle" font-size="11" fill="#475569">score(case, answer) → Verdict</text>
+  <text x="180" y="528" text-anchor="middle" font-size="10" fill="#94A3B8">parallel via asyncio.gather · same rubric · fractions of a cent per case</text>
+
+  <!-- Arrows to aggregator -->
+  <line x1="305" y1="250" x2="445" y2="345" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="305" y1="400" x2="445" y2="395" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Aggregator -->
+  <rect x="450" y="270" width="280" height="220" rx="20" fill="#0F172A" filter="url(#shadow)"/>
+  <text x="590" y="302" text-anchor="middle" font-size="16" font-weight="700" fill="#F8FAFC">AGGREGATOR</text>
+  <text x="590" y="322" text-anchor="middle" font-size="11" fill="#CBD5E1">collects 2 verdicts → 3 signals</text>
+
+  <rect x="470" y="342" width="240" height="40" rx="10" fill="#ECFDF5"/>
+  <text x="590" y="367" text-anchor="middle" font-size="12" font-weight="700" fill="#064E3B">mean + per-judge rationale</text>
+
+  <rect x="470" y="392" width="240" height="40" rx="10" fill="#FFFBEB"/>
+  <text x="590" y="417" text-anchor="middle" font-size="12" font-weight="700" fill="#451A03">disagreement Δ (mini − nano)</text>
+
+  <rect x="470" y="442" width="240" height="40" rx="10" fill="#FDF2F8"/>
+  <text x="590" y="467" text-anchor="middle" font-size="12" font-weight="700" fill="#500724">Krippendorff's α (suite-level)</text>
+
+  <!-- Right side: 3 outputs -->
+  <line x1="735" y1="362" x2="855" y2="190" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="735" y1="412" x2="855" y2="380" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="735" y1="462" x2="855" y2="570" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+
+  <!-- Output 1: scorecard mean -->
+  <rect x="860" y="130" width="290" height="130" rx="16" fill="#ECFDF5" stroke="#10B981" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1005" y="158" text-anchor="middle" font-size="14" font-weight="700" fill="#064E3B">→ Scorecard headline</text>
+  <text x="1005" y="180" text-anchor="middle" font-size="11" fill="#064E3B">mean(verdict) per case · per strategy · per suite</text>
+  <text x="880" y="206" font-size="11" fill="#064E3B">e.g. case#04: 4.5 / 5.0</text>
+  <text x="880" y="222" font-size="10" fill="#475569">M:5 N:4 ← agreement</text>
+  <text x="880" y="244" font-size="11" font-weight="700" fill="#064E3B">verdict: GREEN · ship</text>
+
+  <!-- Output 2: bias flag -->
+  <rect x="860" y="310" width="290" height="150" rx="16" fill="#FEE2E2" stroke="#F43F5E" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1005" y="338" text-anchor="middle" font-size="14" font-weight="700" fill="#9F1239">→ Judge Bias Flag</text>
+  <text x="1005" y="360" text-anchor="middle" font-size="11" fill="#9F1239">trigger when |Δ| &gt; 1 on 0–5 scale</text>
+  <text x="880" y="386" font-size="11" fill="#9F1239">e.g. case#12: Δ = 3</text>
+  <text x="880" y="402" font-size="10" fill="#475569">M:4 N:1 ← model-tier split</text>
+  <text x="880" y="424" font-size="11" font-weight="700" fill="#9F1239">verdict: HUMAN REVIEW</text>
+  <text x="880" y="446" font-size="10" font-style="italic" fill="#9F1239">"the signal a single-judge pipeline absorbs silently"</text>
+
+  <!-- Output 3: build gate -->
+  <rect x="860" y="510" width="290" height="130" rx="16" fill="#FDF2F8" stroke="#EC4899" stroke-width="2" filter="url(#shadow)"/>
+  <text x="1005" y="538" text-anchor="middle" font-size="14" font-weight="700" fill="#500724">→ Build Gate (α gauge)</text>
+  <text x="1005" y="560" text-anchor="middle" font-size="11" fill="#500724">Krippendorff's α across the run</text>
+
+  <!-- Mini α gauge -->
+  <rect x="880" y="580" width="250" height="14" rx="7" fill="#FDF2F8" stroke="#EC4899"/>
+  <rect x="880" y="580" width="180" height="14" rx="7" fill="#EC4899"/>
+  <text x="880" y="610" font-size="10" fill="#475569">0.0</text>
+  <text x="950" y="610" text-anchor="middle" font-size="11" font-weight="700" fill="#500724">α = 0.72 (PASS)</text>
+  <text x="1130" y="610" text-anchor="end" font-size="10" fill="#475569">1.0</text>
+  <line x1="1030" y1="576" x2="1030" y2="600" stroke="#475569" stroke-width="2"/>
+  <text x="1030" y="626" text-anchor="middle" font-size="9" font-weight="700" fill="#475569">floor: 0.60 · calibrate</text>
+
+  <!-- Bottom callout -->
+  <rect x="60" y="670" width="1090" height="64" rx="14" fill="#0F172A" filter="url(#shadow)"/>
+  <text x="605" y="697" text-anchor="middle" font-size="13" font-weight="700" fill="#F8FAFC">Two tiers from one provider - genuine disagreement signal, one API key, one rate limit. Same shape Week 16 CostGuard ships at runtime.</text>
+  <text x="605" y="720" text-anchor="middle" font-size="11" fill="#CBD5E1">If α drops below the calibrated floor, the build fails. Judge mood ≠ model quality.</text>
+
+  <text x="600" y="748" text-anchor="middle" font-size="10" fill="#94A3B8">Applied GenAI &amp; Agentic AI Engineering Course · Week 07 · BreakRAG™</text>
+</svg>

@@ -1,0 +1,175 @@
+# BreakRAG™ - the eval loop, in CI.
+#
+# Two jobs, and the split is the same one the tests make:
+#
+#   smoke  every push and pull request. Installs, runs the offline suite, and
+#          runs the leakage hygiene scan against the repository itself. No API
+#          key, no network, no cost. Seconds.
+#
+#   live   every pull request, push to main, nightly, and on demand. Brings the
+#          system under test up, spends real tokens on the 70-case suite,
+#          asserts the four floors, and posts the scorecard on the pull request.
+#          Skips cleanly when the key or the index URL is absent (forks).
+#
+# The three leakage checks live in app/scorecard.py. In the smoke job the
+# n-gram scan and the canary scan run against the repository's own text, which
+# is the corpus a careless commit contaminates first: a seed question pasted
+# into a README, a canary string copied into a test. The embedding scan and
+# the canary probe against the running system need the index and a key, so
+# they run in the live job, where every skipped check is reported as skipped.
+#
+# Secrets the live job expects: OPENAI_API_KEY, QDRANT_URL, QDRANT_API_KEY.
+# Repository variable: QDRANT_COLLECTION (defaults to knowledgevault).
+
+name: eval
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # 02:30 UTC nightly, after the working day in every cohort time zone.
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  PYTHON_VERSION: "3.11"
+
+concurrency:
+  # One run per event and branch at a time. A newer push cancels the older
+  # run, so the scorecard on a pull request is always for the latest commit.
+  group: eval-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  # ---------------------------------------------------------------------------
+  # smoke: free, offline, every time
+  # ---------------------------------------------------------------------------
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install
+        run: pip install -r requirements.txt
+
+      - name: Offline suite
+        run: pytest -q
+
+      - name: Leakage checks
+        run: |
+          python - <<'PY'
+          import sys
+          from pathlib import Path
+          from app.adversarial import load_seeds
+          from app.scorecard import ngram_leakage_check
+
+          seeds = load_seeds()
+          # Every text file in the repository except the seed set itself.
+          exts = {".md", ".py", ".ipynb", ".html", ".txt", ".yml", ".yaml", ".json",
+                  ".svg", ".toml", ".cfg", ".ini", ".csv", ".rst"}
+          skip = {Path("app/seeds/golden_set.json")}
+          skip_dirs = {".git", ".venv", "venv", "node_modules", "runs", "__pycache__"}
+          files = [
+              p for p in Path(".").rglob("*")
+              if p.suffix in exts and p.is_file()
+              and not (skip_dirs & set(p.parts)) and p not in skip
+          ]
+          haystack = "\n".join(p.read_text(errors="ignore") for p in files)
+          ok, notes = ngram_leakage_check(seeds, haystack)
+          print(f"n-gram scan of {len(files)} repository files: {notes}")
+          hits = [s.id for s in seeds if s.canary and s.canary in haystack]
+          print("canary scan: " + (f"FOUND in repository for {hits}" if hits else "clean"))
+          print("embedding scan and SUT canary probe: run in the live job (need the index)")
+          sys.exit(0 if ok and not hits else 1)
+          PY
+
+  # ---------------------------------------------------------------------------
+  # live: real SUT, real judges, the four floors
+  # ---------------------------------------------------------------------------
+  live:
+    name: live (four floors)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      OPENAI_API_KEY:    ${{ secrets.OPENAI_API_KEY }}
+      QDRANT_MODE:       server
+      QDRANT_URL:        ${{ secrets.QDRANT_URL }}
+      QDRANT_API_KEY:    ${{ secrets.QDRANT_API_KEY }}
+      QDRANT_COLLECTION: ${{ vars.QDRANT_COLLECTION || 'knowledgevault' }}
+      SUT_BASE_URL:      http://localhost:8000
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+      - name: Skip cleanly when the key is absent
+        if: env.OPENAI_API_KEY == '' || env.QDRANT_URL == ''
+        run: |
+          echo "OPENAI_API_KEY or QDRANT_URL is not set for this repository or fork."
+          echo "The live eval needs both. Skipping, not failing."
+          echo "SKIP=1" >> "$GITHUB_ENV"
+          exit 0
+
+      - name: Set up Python
+        if: env.SKIP != '1'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install
+        if: env.SKIP != '1'
+        run: pip install -r requirements.txt
+
+      - name: Start the SUT
+        # Self-contained mode: the harness evaluates its own /answer route,
+        # which reads the same index and the same gate as the Week 5 service.
+        # Point SUT_BASE_URL elsewhere to evaluate another service instead.
+        if: env.SKIP != '1'
+        run: |
+          nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > sut.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8000/health && break
+            sleep 1
+          done
+          curl -sf http://localhost:8000/health
+
+      - name: Run the four floors
+        if: env.SKIP != '1'
+        run: pytest -m live tests/test_eval_harness.py -v
+
+      - name: Upload the scorecard
+        if: always() && env.SKIP != '1'
+        uses: actions/upload-artifact@v4
+        with:
+          name: breakrag-scorecard-${{ github.run_id }}
+          path: scorecards/last.md
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Post the scorecard on the pull request
+        if: always() && env.SKIP != '1' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            // The same markdown render_markdown() produces locally.
+            const path = 'scorecards/last.md';
+            if (!fs.existsSync(path)) return;
+            const body = fs.readFileSync(path, 'utf8');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## BreakRAG scorecard\n\n${body}`,
+            });

@@ -1,0 +1,10 @@
+{
+  "_note": "One example row. Your seed set lives in harness/app/seeds/golden_set.json as a JSON list of rows shaped like this one, ten or more, at least two with expected_behaviour abstain. Delete this file or leave it; the scan does not read it as seeds.",
+  "id": "warranty-003",
+  "question": "How long after delivery can a customer return a product for a refund?",
+  "expected_answer": "Thirty days from the delivery date, provided the item is unused and in its original packaging.",
+  "expected_behaviour": "match",
+  "canary": "kq4-marigold-6182",
+  "provenance": "returns-policy.pdf, section 2.1 (Refund window)",
+  "reviewer": "Your Name, checked against the source on 2026-10-06"
+}

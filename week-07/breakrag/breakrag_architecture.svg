@@ -1,0 +1,167 @@
+<svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F8FAFC"/>
+      <stop offset="100%" stop-color="#EEF2FF"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+      <feOffset dx="0" dy="3" result="off"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#475569"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="800" fill="url(#bg)"/>
+
+  <text x="600" y="46" text-anchor="middle" font-size="26" font-weight="700" fill="#0F172A">BreakRAG™ - System Architecture</text>
+  <text x="600" y="72" text-anchor="middle" font-size="14" fill="#64748B">Built-in Qdrant SUT (System Under Test) → adversarial generator → two-tier OpenAI judges → scorecard + streaming browser UI.</text>
+
+  <!-- Stage 1: Seed + SUT -->
+  <rect x="40" y="120" width="220" height="300" rx="18" fill="#FFFFFF" stroke="#475569" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="40" y="120" width="220" height="44" rx="18" fill="#475569"/>
+  <text x="150" y="148" text-anchor="middle" font-size="14" font-weight="700" fill="#F8FAFC">① INPUT</text>
+
+  <rect x="60" y="180" width="180" height="64" rx="12" fill="#EEF2FF" stroke="#4F46E5"/>
+  <text x="150" y="204" text-anchor="middle" font-size="13" font-weight="700" fill="#1E1B4B">Golden Seed Set</text>
+  <text x="150" y="222" text-anchor="middle" font-size="11" fill="#1E1B4B">10 hand-curated QA pairs</text>
+  <text x="150" y="236" text-anchor="middle" font-size="11" fill="#1E1B4B">from CitationRAG Transformer dataset</text>
+
+  <rect x="60" y="258" width="180" height="76" rx="12" fill="#FFFBEB" stroke="#F59E0B"/>
+  <text x="150" y="280" text-anchor="middle" font-size="13" font-weight="700" fill="#451A03">System Under Test</text>
+  <text x="150" y="298" text-anchor="middle" font-size="11" fill="#451A03">POST /answer (built-in)</text>
+  <text x="150" y="314" text-anchor="middle" font-size="11" fill="#451A03">Qdrant · BM25 + dense + RRF</text>
+  <text x="150" y="328" text-anchor="middle" font-size="10" fill="#451A03" font-style="italic">or external previous weeks server</text>
+
+  <text x="150" y="358" text-anchor="middle" font-size="10" font-style="italic" fill="#64748B">Tool layer →</text>
+
+  <text x="150" y="385" text-anchor="middle" font-size="10" fill="#64748B">app/seeds/golden_set.json</text>
+  <text x="150" y="400" text-anchor="middle" font-size="10" fill="#64748B">app/retriever.py + generator.py</text>
+
+  <!-- Arrow 1 -->
+  <line x1="265" y1="280" x2="305" y2="280" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <!-- Stage 2: Adversarial Generator -->
+  <rect x="310" y="120" width="240" height="380" rx="18" fill="#FFFFFF" stroke="#F59E0B" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="310" y="120" width="240" height="44" rx="18" fill="#F59E0B"/>
+  <text x="430" y="148" text-anchor="middle" font-size="14" font-weight="700" fill="#451A03">② ADVERSARIAL GENERATOR</text>
+
+  <text x="430" y="186" text-anchor="middle" font-size="12" font-weight="600" fill="#451A03">10 → 70 red-team cases (deterministic)</text>
+
+  <g font-size="11" font-weight="600">
+    <rect x="335" y="200" width="190" height="34" rx="10" fill="#FFFBEB" stroke="#F59E0B"/>
+    <text x="430" y="222" text-anchor="middle" fill="#451A03">⌨️  typo (table-based)</text>
+
+    <rect x="335" y="244" width="190" height="34" rx="10" fill="#FFFBEB" stroke="#F59E0B"/>
+    <text x="430" y="266" text-anchor="middle" fill="#451A03">🔓  jailbreak (off-topic ask)</text>
+
+    <rect x="335" y="288" width="190" height="34" rx="10" fill="#FFFBEB" stroke="#F59E0B"/>
+    <text x="430" y="310" text-anchor="middle" fill="#451A03">🔗  multi-hop (distractor)</text>
+
+    <rect x="335" y="332" width="190" height="34" rx="10" fill="#FFFBEB" stroke="#F59E0B"/>
+    <text x="430" y="354" text-anchor="middle" fill="#451A03">⚔️  conflict (injected ctx)</text>
+
+    <rect x="335" y="376" width="190" height="34" rx="10" fill="#FFFBEB" stroke="#F59E0B"/>
+    <text x="430" y="398" text-anchor="middle" fill="#451A03">😡  hostile tone</text>
+  </g>
+
+  <text x="430" y="436" text-anchor="middle" font-size="10" fill="#64748B">each case ships an</text>
+  <text x="430" y="450" text-anchor="middle" font-size="10" fill="#64748B">expected behaviour</text>
+  <text x="430" y="464" text-anchor="middle" font-size="10" fill="#64748B">(refuse / match / abstain)</text>
+
+  <text x="430" y="488" text-anchor="middle" font-size="10" font-style="italic" fill="#64748B">app/adversarial.py::expand</text>
+
+  <!-- Arrow 2 -->
+  <line x1="555" y1="310" x2="595" y2="310" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <!-- Stage 3: Two-tier OpenAI judges -->
+  <rect x="600" y="120" width="380" height="380" rx="18" fill="#FFFFFF" stroke="#4F46E5" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="600" y="120" width="380" height="44" rx="18" fill="#4F46E5"/>
+  <text x="790" y="148" text-anchor="middle" font-size="14" font-weight="700" fill="#EEF2FF">③ TWO-TIER OPENAI JUDGES</text>
+
+  <text x="790" y="184" text-anchor="middle" font-size="12" font-weight="600" fill="#1E1B4B">Same rubric · two model tiers · one API key</text>
+
+  <!-- Primary judge (nano) -->
+  <rect x="620" y="200" width="160" height="160" rx="14" fill="#FFFBEB" stroke="#F59E0B" stroke-width="2"/>
+  <circle cx="700" cy="240" r="22" fill="#F59E0B"/>
+  <text x="700" y="247" text-anchor="middle" font-size="16" font-weight="700" fill="#FFFFFF">N</text>
+  <text x="700" y="282" text-anchor="middle" font-size="13" font-weight="700" fill="#451A03">OpenAIJudgeNano</text>
+  <text x="700" y="300" text-anchor="middle" font-size="11" fill="#475569">gpt-5.4-nano</text>
+  <text x="700" y="314" text-anchor="middle" font-size="10" fill="#475569">2026-03-17 (pinned)</text>
+  <text x="700" y="338" text-anchor="middle" font-size="10" fill="#475569" font-style="italic">primary · fast tier</text>
+  <text x="700" y="352" text-anchor="middle" font-size="10" fill="#475569" font-style="italic">independent of SUT model</text>
+
+  <!-- Secondary judge (mini) -->
+  <rect x="800" y="200" width="160" height="160" rx="14" fill="#EEF2FF" stroke="#4F46E5" stroke-width="2"/>
+  <circle cx="880" cy="240" r="22" fill="#4F46E5"/>
+  <text x="880" y="247" text-anchor="middle" font-size="16" font-weight="700" fill="#FFFFFF">M</text>
+  <text x="880" y="282" text-anchor="middle" font-size="13" font-weight="700" fill="#1E1B4B">OpenAIJudge</text>
+  <text x="880" y="300" text-anchor="middle" font-size="11" fill="#475569">gpt-5.4-mini</text>
+  <text x="880" y="314" text-anchor="middle" font-size="10" fill="#475569">2026-03-17 (pinned)</text>
+  <text x="880" y="338" text-anchor="middle" font-size="10" fill="#475569" font-style="italic">secondary · full reasoning</text>
+  <text x="880" y="352" text-anchor="middle" font-size="10" fill="#475569" font-style="italic">shares SUT model (caveat)</text>
+
+  <!-- Rubric note below judges -->
+  <rect x="620" y="378" width="340" height="50" rx="12" fill="#FFFFFF" stroke="#475569"/>
+  <text x="790" y="398" text-anchor="middle" font-size="11" font-weight="700" fill="#0F172A">Strategy-specific rubric → 0–5 score + justification</text>
+  <text x="790" y="416" text-anchor="middle" font-size="10" font-style="italic" fill="#475569">parallel via asyncio.gather · per-judge error capture</text>
+
+  <text x="790" y="450" text-anchor="middle" font-size="10" font-style="italic" fill="#64748B">app/judges.py · Model layer</text>
+
+  <!-- Arrow 3 -->
+  <line x1="985" y1="310" x2="1025" y2="310" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <!-- Stage 4: Scorecard + UI -->
+  <rect x="1030" y="120" width="150" height="380" rx="18" fill="#FFFFFF" stroke="#10B981" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="1030" y="120" width="150" height="44" rx="18" fill="#10B981"/>
+  <text x="1105" y="148" text-anchor="middle" font-size="14" font-weight="700" fill="#ECFDF5">④ SCORECARD + UI</text>
+
+  <rect x="1048" y="180" width="114" height="62" rx="10" fill="#ECFDF5" stroke="#10B981"/>
+  <text x="1105" y="200" text-anchor="middle" font-size="11" font-weight="700" fill="#064E3B">bootstrap CI util</text>
+  <text x="1105" y="216" text-anchor="middle" font-size="10" fill="#064E3B">run-vs-run (lab)</text>
+  <text x="1105" y="232" text-anchor="middle" font-size="9" fill="#064E3B">paired_bootstrap_ci</text>
+
+  <rect x="1048" y="252" width="114" height="62" rx="10" fill="#ECFDF5" stroke="#10B981"/>
+  <text x="1105" y="272" text-anchor="middle" font-size="11" font-weight="700" fill="#064E3B">adv pass rate</text>
+  <text x="1105" y="288" text-anchor="middle" font-size="10" fill="#064E3B">per strategy</text>
+  <text x="1105" y="306" text-anchor="middle" font-size="9" fill="#064E3B">floor ≥ 0.70</text>
+
+  <rect x="1048" y="324" width="114" height="62" rx="10" fill="#ECFDF5" stroke="#10B981"/>
+  <text x="1105" y="344" text-anchor="middle" font-size="11" font-weight="700" fill="#064E3B">judge α</text>
+  <text x="1105" y="358" text-anchor="middle" font-size="10" fill="#064E3B">Krippendorff</text>
+  <text x="1105" y="378" text-anchor="middle" font-size="9" fill="#064E3B">floor ≥ 0.60 (calibrate)</text>
+
+  <rect x="1048" y="396" width="114" height="62" rx="10" fill="#ECFDF5" stroke="#10B981"/>
+  <text x="1105" y="416" text-anchor="middle" font-size="11" font-weight="700" fill="#064E3B">leakage check</text>
+  <text x="1105" y="432" text-anchor="middle" font-size="10" fill="#064E3B">n-gram + embedding + canary</text>
+  <text x="1105" y="448" text-anchor="middle" font-size="9" fill="#064E3B">runs first</text>
+
+  <text x="1105" y="480" text-anchor="middle" font-size="10" font-style="italic" fill="#64748B">Memory layer →</text>
+
+  <!-- Bottom: Browser UI + SSE banner -->
+  <rect x="40" y="540" width="1140" height="100" rx="16" fill="#0F172A" filter="url(#shadow)"/>
+  <text x="610" y="568" text-anchor="middle" font-size="14" font-weight="700" fill="#F8FAFC">Browser UI at localhost:8000 + SSE stream (Memory layer)</text>
+  <text x="610" y="594" text-anchor="middle" font-size="12" fill="#CBD5E1">GET /run-demo-stream emits start · progress (per case) · warn · scorecard events - same stream a CI runner consumes.</text>
+  <text x="610" y="620" text-anchor="middle" font-size="11" fill="#94A3B8" font-style="italic">Reproducibility manifest emitted with every run: dataset hash · rubric hash · seed · run ID · model versions.</text>
+
+  <!-- Layer labels -->
+  <rect x="40" y="660" width="1140" height="60" rx="14" fill="#FFFFFF" stroke="#CBD5E1" filter="url(#shadow)"/>
+  <text x="610" y="682" text-anchor="middle" font-size="12" font-weight="700" fill="#0F172A">Maps onto the four-layer mental model:</text>
+  <g font-size="11" font-weight="600">
+    <circle cx="160" cy="703" r="6" fill="#4F46E5"/>
+    <text x="172" y="707" fill="#1E1B4B">Model = two-tier OpenAI judges</text>
+
+    <circle cx="430" cy="703" r="6" fill="#06B6D4"/>
+    <text x="442" y="707" fill="#083344">Retrieval = seeds + Qdrant retriever</text>
+
+    <circle cx="740" cy="703" r="6" fill="#F59E0B"/>
+    <text x="752" y="707" fill="#451A03">Tool = /answer SUT</text>
+
+    <circle cx="950" cy="703" r="6" fill="#EC4899"/>
+    <text x="962" y="707" fill="#500724">Memory = scorecard + SSE stream</text>
+  </g>
+
+  <text x="600" y="780" text-anchor="middle" font-size="10" fill="#94A3B8">Applied GenAI &amp; Agentic AI Engineering Course · Week 07 · BreakRAG™</text>
+</svg>

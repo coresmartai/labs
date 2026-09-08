@@ -1,0 +1,132 @@
+<svg viewBox="0 0 1200 780" xmlns="http://www.w3.org/2000/svg" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F8FAFC"/>
+      <stop offset="100%" stop-color="#ECFDF5"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+      <feOffset dx="0" dy="3" result="off"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#10B981"/>
+    </marker>
+    <marker id="arrow-rose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#F43F5E"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="780" fill="url(#bg)"/>
+
+  <text x="600" y="46" text-anchor="middle" font-size="26" font-weight="700" fill="#0F172A">CI Loop with PR Scorecard - The Daily Ritual</text>
+  <text x="600" y="72" text-anchor="middle" font-size="14" fill="#64748B">Every PR runs the full BreakRAG™ harness. The scorecard is the artifact engineers actually read.</text>
+
+  <!-- Node 1: PR -->
+  <rect x="60" y="130" width="180" height="80" rx="14" fill="#EEF2FF" stroke="#4F46E5" stroke-width="2" filter="url(#shadow)"/>
+  <text x="150" y="160" text-anchor="middle" font-size="14" font-weight="700" fill="#1E1B4B">① Pull Request</text>
+  <text x="150" y="180" text-anchor="middle" font-size="11" fill="#1E1B4B">prompt or code change</text>
+  <text x="150" y="196" text-anchor="middle" font-size="11" fill="#1E1B4B">on a feature branch</text>
+
+  <!-- Node 2: GHA Runner -->
+  <rect x="280" y="130" width="200" height="80" rx="14" fill="#FFFBEB" stroke="#F59E0B" stroke-width="2" filter="url(#shadow)"/>
+  <text x="380" y="160" text-anchor="middle" font-size="14" font-weight="700" fill="#451A03">② GitHub Actions</text>
+  <text x="380" y="180" text-anchor="middle" font-size="11" fill="#451A03">Python 3.11 · pinned deps</text>
+  <text x="380" y="196" text-anchor="middle" font-size="11" fill="#451A03">secret-sanity step first</text>
+
+  <!-- Node 3: Eval Suite -->
+  <rect x="520" y="130" width="280" height="330" rx="14" fill="#FFFFFF" stroke="#0F172A" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="520" y="130" width="280" height="40" rx="14" fill="#0F172A"/>
+  <text x="660" y="155" text-anchor="middle" font-size="14" font-weight="700" fill="#F8FAFC">③ Eval Suite (pytest)</text>
+
+  <text x="660" y="190" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">four real assertions</text>
+
+  <rect x="540" y="204" width="240" height="50" rx="10" fill="#ECFDF5" stroke="#10B981"/>
+  <text x="660" y="224" text-anchor="middle" font-size="12" font-weight="700" fill="#064E3B">n ≥ min_samples</text>
+  <text x="660" y="244" text-anchor="middle" font-size="10" fill="#475569">demo floor 50 (70-case run) · 100+ in prod</text>
+
+  <rect x="540" y="262" width="240" height="50" rx="10" fill="#ECFDF5" stroke="#10B981"/>
+  <text x="660" y="282" text-anchor="middle" font-size="12" font-weight="700" fill="#064E3B">adv_pass_rate ≥ 0.70 / strategy</text>
+  <text x="660" y="302" text-anchor="middle" font-size="10" fill="#475569">refuse / match / abstain as expected</text>
+
+  <rect x="540" y="320" width="240" height="50" rx="10" fill="#ECFDF5" stroke="#10B981"/>
+  <text x="660" y="340" text-anchor="middle" font-size="12" font-weight="700" fill="#064E3B">judge_agreement_alpha ≥ 0.60</text>
+  <text x="660" y="360" text-anchor="middle" font-size="10" fill="#475569">Krippendorff's α - bias guard</text>
+
+  <rect x="540" y="378" width="240" height="50" rx="10" fill="#ECFDF5" stroke="#10B981"/>
+  <text x="660" y="398" text-anchor="middle" font-size="12" font-weight="700" fill="#064E3B">leakage check clean</text>
+  <text x="660" y="418" text-anchor="middle" font-size="10" fill="#475569">n-gram + embedding + canary</text>
+
+  <text x="660" y="450" text-anchor="middle" font-size="10" fill="#94A3B8" font-style="italic">~3 min wall-clock (70 cases) · async judges</text>
+
+  <!-- Node 4: PR Comment (scorecard mockup) -->
+  <rect x="840" y="130" width="310" height="330" rx="14" fill="#FFFFFF" stroke="#475569" stroke-width="2" filter="url(#shadow)"/>
+  <rect x="840" y="130" width="310" height="40" rx="14" fill="#475569"/>
+  <text x="995" y="155" text-anchor="middle" font-size="14" font-weight="700" fill="#F8FAFC">④ PR Comment Scorecard</text>
+
+  <text x="860" y="190" font-size="11" font-weight="700" fill="#0F172A">BreakRAG™ · this PR's run</text>
+  <text x="860" y="204" font-size="9" fill="#64748B">leakage check: ✓ passed · 70 samples (floor 50)</text>
+
+  <!-- scorecard rows -->
+  <rect x="860" y="216" width="270" height="32" rx="6" fill="#ECFDF5" stroke="#10B981"/>
+  <text x="872" y="236" font-size="11" font-weight="700" fill="#064E3B">✓ n_samples 70 (floor 50, demo)</text>
+
+  <rect x="860" y="252" width="270" height="32" rx="6" fill="#ECFDF5" stroke="#10B981"/>
+  <text x="872" y="272" font-size="11" font-weight="700" fill="#064E3B">✓ adv pass: seed/typo/jailbreak ≥ 0.70</text>
+
+  <rect x="860" y="288" width="270" height="32" rx="6" fill="#FEE2E2" stroke="#F43F5E"/>
+  <text x="872" y="308" font-size="11" font-weight="700" fill="#9F1239">✗ conflict strategy 0.61 (FAIL, floor 0.70)</text>
+
+  <rect x="860" y="324" width="270" height="32" rx="6" fill="#FEE2E2" stroke="#F43F5E"/>
+  <text x="872" y="344" font-size="11" font-weight="700" fill="#9F1239">✗ judge agreement α = 0.54 (FAIL, floor 0.60)</text>
+
+  <text x="860" y="376" font-size="10" font-style="italic" fill="#64748B">→ verdict: RED · merge BLOCKED</text>
+  <text x="860" y="392" font-size="10" font-style="italic" fill="#64748B">→ disagreement spike on cases #12, #38, #61</text>
+
+  <line x1="860" y1="404" x2="1130" y2="404" stroke="#CBD5E1"/>
+  <text x="860" y="424" font-size="10" font-weight="700" fill="#475569">View full HTML report ↗ (CI artifact)</text>
+  <text x="860" y="440" font-size="10" fill="#94A3B8">previous baseline · per-judge breakdown · prompts</text>
+
+  <!-- arrows -->
+  <line x1="245" y1="170" x2="275" y2="170" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+  <line x1="485" y1="170" x2="515" y2="170" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+  <line x1="805" y1="290" x2="835" y2="290" stroke="#475569" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+
+  <!-- Node 5: human reviewer -->
+  <rect x="840" y="510" width="310" height="100" rx="14" fill="#ECFDF5" stroke="#10B981" stroke-width="2" filter="url(#shadow)"/>
+  <text x="995" y="540" text-anchor="middle" font-size="14" font-weight="700" fill="#064E3B">⑤ Reviewer reads scorecard</text>
+  <text x="995" y="562" text-anchor="middle" font-size="11" fill="#064E3B">numerical drift? bias spike?</text>
+  <text x="995" y="580" text-anchor="middle" font-size="11" fill="#064E3B">strategy that broke?</text>
+  <text x="995" y="600" text-anchor="middle" font-size="10" font-style="italic" fill="#475569">tool for arguing well - not a victory dashboard</text>
+
+  <line x1="995" y1="465" x2="995" y2="505" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+
+  <!-- Decision branches -->
+  <!-- Merge branch (success) -->
+  <rect x="520" y="540" width="280" height="80" rx="14" fill="#ECFDF5" stroke="#10B981" stroke-width="2" filter="url(#shadow)"/>
+  <text x="660" y="572" text-anchor="middle" font-size="14" font-weight="700" fill="#064E3B">⑥a  MERGE · baseline updates</text>
+  <text x="660" y="592" text-anchor="middle" font-size="11" fill="#064E3B">scorecard becomes new baseline,</text>
+  <text x="660" y="608" text-anchor="middle" font-size="11" fill="#064E3B">leakage check re-runs in nightly</text>
+
+  <!-- Revise branch (rose) -->
+  <rect x="60" y="540" width="280" height="80" rx="14" fill="#FEE2E2" stroke="#F43F5E" stroke-width="2" filter="url(#shadow)"/>
+  <text x="200" y="572" text-anchor="middle" font-size="14" font-weight="700" fill="#9F1239">⑥b  REVISE · merge blocked</text>
+  <text x="200" y="592" text-anchor="middle" font-size="11" fill="#9F1239">author iterates on the prompt</text>
+  <text x="200" y="608" text-anchor="middle" font-size="11" fill="#9F1239">or rolls back the rubric change</text>
+
+  <line x1="845" y1="568" x2="805" y2="568" stroke="#10B981" stroke-width="2.5" marker-end="url(#arrow-green)"/>
+  <text x="825" y="555" text-anchor="middle" font-size="11" font-weight="700" fill="#10B981">PASS</text>
+
+  <line x1="845" y1="588" x2="345" y2="588" stroke="#F43F5E" stroke-width="2.5" stroke-dasharray="6 6" marker-end="url(#arrow-rose)"/>
+  <text x="595" y="578" text-anchor="middle" font-size="11" font-weight="700" fill="#F43F5E">FAIL - feeds back</text>
+
+  <!-- Back to PR -->
+  <line x1="150" y1="540" x2="150" y2="215" stroke="#F43F5E" stroke-width="2.5" stroke-dasharray="6 6" marker-end="url(#arrow-rose)"/>
+  <text x="135" y="385" text-anchor="end" font-size="10" font-weight="700" fill="#F43F5E">push new commit</text>
+
+  <!-- Nightly extended note -->
+  <rect x="60" y="660" width="1090" height="64" rx="14" fill="#0F172A" filter="url(#shadow)"/>
+  <text x="605" y="687" text-anchor="middle" font-size="13" font-weight="700" fill="#F8FAFC">Nightly extended run on `main` swells case count to ~2000 - trade speed for statistical power.</text>
+
+  <text x="600" y="752" text-anchor="middle" font-size="10" fill="#94A3B8">Applied GenAI &amp; Agentic AI Engineering Course · Week 07 · BreakRAG™</text>
+</svg>

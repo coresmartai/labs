@@ -1,0 +1,31 @@
+# Secrets
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Eval outputs (large + per-run). scorecards/last.md is NOT ignored: it is
+# the one artefact a pull request is expected to carry.
+runs/
+qdrant_local/
+corpus_snapshot.json
+*.snapshot.json
+scorecards/*
+!scorecards/last.md
+*.scorecard.html
+*.scorecard.json
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store

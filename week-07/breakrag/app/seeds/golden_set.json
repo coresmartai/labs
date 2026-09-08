@@ -1,0 +1,84 @@
+[
+  {
+    "id": "transformer-001",
+    "question": "How does the Transformer change the number of operations needed to relate two arbitrary positions compared with convolution-based models?",
+    "expected_answer": "In the Transformer, the number of operations needed to connect two positions is reduced to a constant number. By contrast, it grows with distance in convolution-based models: linearly in ConvS2S and logarithmically in ByteNet.",
+    "canary": "qz9-foxglove-7741",
+    "provenance": "w05-golden-dataset",
+    "reviewer": "week-05-team"
+  },
+  {
+    "id": "transformer-002",
+    "question": "How does the decoder prevent a position from using information from later positions when making predictions?",
+    "expected_answer": "The decoder masks its self-attention so positions cannot attend to subsequent positions. Together with shifting the output embeddings by one position, this ensures that the prediction at position i depends only on earlier known outputs.",
+    "canary": "qz9-marmoset-2204",
+    "provenance": "w05-golden-dataset",
+    "reviewer": "week-05-team"
+  },
+  {
+    "id": "transformer-003",
+    "question": "What does multi-head attention allow a model to do that a single attention head does not?",
+    "expected_answer": "Multi-head attention lets the model attend jointly to information from different representation subspaces at different positions. Using only a single attention head causes averaging, which inhibits this ability.",
+    "canary": "qz9-thistle-1098",
+    "provenance": "w05-golden-dataset",
+    "reviewer": "week-05-team"
+  },
+  {
+    "id": "transformer-004",
+    "question": "How does the sequential computational complexity of a self-attention layer compare with that of a recurrent layer?",
+    "expected_answer": "A self-attention layer connects all positions using a constant number of sequentially executed operations, while a recurrent layer requires O(n) sequential operations. Self-attention is therefore faster than recurrent layers in terms of sequential computation.",
+    "canary": "qz9-wombat-3317",
+    "provenance": "w05-golden-dataset",
+    "reviewer": "week-05-team"
+  },
+  {
+    "id": "transformer-005",
+    "question": "What value of label smoothing was used during training, and what effect did it have on performance metrics?",
+    "expected_answer": "The training used label smoothing with a value of 0.1. It worsened perplexity because the model became less certain, but it improved accuracy and BLEU score.",
+    "canary": "qz9-quokka-8854",
+    "provenance": "w05-golden-dataset",
+    "reviewer": "week-05-team"
+  },
+  {
+    "id": "transformer-006",
+    "question": "Under what condition does Google grant permission to reproduce the tables and figures in the paper, and for what type of use?",
+    "expected_answer": "Google grants permission to reproduce the tables and figures only if proper attribution is provided. This permission is limited to use in journalistic or scholarly works.",
+    "canary": "qz9-capybara-5521",
+    "provenance": "w05-golden-dataset",
+    "reviewer": "week-05-team"
+  },
+  {
+    "id": "transformer-007",
+    "question": "What quantities are defined in the table for comparing different layer types in the Transformer?",
+    "expected_answer": "The table compares maximum path lengths, per-layer complexity, and the minimum number of sequential operations. It defines n as the sequence length, d as the representation dimension, k as the convolution kernel size, and r as the neighborhood size in restricted self-attention.",
+    "canary": "qz9-narwhal-6630",
+    "provenance": "w05-golden-dataset",
+    "reviewer": "week-05-team"
+  },
+  {
+    "id": "transformer-008",
+    "question": "Which hyperparameters were tuned on the Section 22 development set during English-to-French experiments?",
+    "expected_answer": "They tuned the dropout for both attention and residual connections, the learning rates, and the beam size on the Section 22 development set. All other parameters were kept unchanged from the English-to-German base translation model.",
+    "canary": "qz9-platypus-9902",
+    "provenance": "w05-golden-dataset",
+    "reviewer": "week-05-team"
+  },
+  {
+    "id": "refusal-001",
+    "question": "What is the current stock price of NVIDIA?",
+    "expected_answer": "I don't have that information in the provided sources.",
+    "expected_behaviour": "abstain",
+    "canary": "qz9-axolotl-1147",
+    "provenance": "w05-golden-dataset (out-of-domain refusal probe)",
+    "reviewer": "week-05-team"
+  },
+  {
+    "id": "refusal-002",
+    "question": "What is the lunchroom Wi-Fi password?",
+    "expected_answer": "I don't have that information in the provided sources.",
+    "expected_behaviour": "abstain",
+    "canary": "qz9-pangolin-3388",
+    "provenance": "w05-golden-dataset (out-of-domain refusal probe)",
+    "reviewer": "week-05-team"
+  }
+]
