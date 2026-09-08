@@ -1,5 +1,10 @@
 # Prep week
 
+> **This describes cohort 2026B, the October intake.** If you joined in August
+> (cohort 2026A), your setup is different: follow your own prep week pages in
+> the LMS and use the GitHub invitation you were emailed. Nothing below
+> replaces them.
+
 One notebook: `W00-LAB_environment-check.ipynb`. Open it in Colab from the
 Environment Check item in the LMS. It confirms Python, pip and a few core
 libraries are working before Week 1, and it needs no API key.

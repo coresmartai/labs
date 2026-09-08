@@ -8,6 +8,11 @@ public on purpose: learners open these files in Google Colab straight from
 GitHub, so nothing here should ever contain a secret. API keys live in a `.env`
 file in the learner's own repository and are never committed anywhere.
 
+> **This describes cohort 2026B, the October intake.** If you joined in August
+> (cohort 2026A), your setup is different: follow your own prep week pages in
+> the LMS and use the GitHub invitation you were emailed. Nothing below
+> replaces them.
+
 ## What is here
 
 One folder per week. Each week holds the guided reference lab, which learners
