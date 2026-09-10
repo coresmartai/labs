@@ -1,0 +1,17 @@
+[
+  {
+    "question": "Replace this with a question the corpus can fully answer.",
+    "answerability": "answerable",
+    "why": "One sentence: which documents cover it, and why you expect a complete answer."
+  },
+  {
+    "question": "Replace this with a question the corpus answers only partly.",
+    "answerability": "partial",
+    "why": "One sentence: which half the corpus covers, and which half it does not."
+  },
+  {
+    "question": "Replace this with a question that sounds in scope and is not answerable at all.",
+    "answerability": "unanswerable",
+    "why": "One sentence: why somebody would expect this to be in an RFC, and why it is not."
+  }
+]

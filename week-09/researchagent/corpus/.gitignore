@@ -1,0 +1,2 @@
+# The RFCs themselves are fetched, never committed. See fetch.py for why.
+rfc/
