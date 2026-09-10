@@ -1,0 +1,21 @@
+# Never commit these
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+
+# Model artefacts. The adapter is reproducible from your data and your config notes,
+# and the base model is a download. Neither belongs in a repository.
+*.safetensors
+*.bin
+out/
+adapter/
+checkpoint-*/
+models/
+
+# Anything large that a script can regenerate
+*.zip
+*.tar.gz

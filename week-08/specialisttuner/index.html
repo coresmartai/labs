@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<!--
+  Applied GenAI & Agentic AI Engineering - Week 8 · SpecialistTuner (LoRA)
+  ==================================================
+  Tabs: Inference | Fine-Tune | Eval
+  Intentional deviations from the template (documented, not force-fit):
+    1. id="notes" textarea labelled "Message" - the input is a chat message, not release notes
+    2. Extra "Adapter Path" input - LoRA adapter is configurable per-request
+    3. No provider selector - this service only wraps one model (base + one LoRA adapter)
+    4. API port 8000 - standard (no deviation)
+    5. Three-tab layout - adds Fine-Tune (LoRA training) and Eval tabs for full workflow
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Applied GenAI & Agentic AI Engineering - Week 8 · SpecialistTuner (LoRA)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <style>
+    /* ═══════════════════════════════════════════════════════════
+       CORE - shared base (do not change tokens)
+       ═══════════════════════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #0d1117;
+      --surface:    #161b22;
+      --surface-2:  #21262d;
+      --surface-3:  #2d333b;
+      --border:     #30363d;
+      --text:       #e6edf3;
+      --text-muted: #7d8590;
+      --blue:       #58a6ff;
+      --blue-dim:   #1f3a5f;
+      --green:      #3fb950;
+      --green-dim:  #1a3a28;
+      --red:        #f85149;
+      --red-dim:    #3d1a1a;
+      --orange:     #d29922;
+      --radius:     8px;
+      --mono:       'Fira Code','Cascadia Code','Consolas',monospace;
+    }
+
+    html, body { height: 100%; }
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px; display: flex; flex-direction: column;
+      height: 100vh; overflow: hidden;
+    }
+
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; height: 52px; background: var(--surface);
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .header-title { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; }
+    .header-title .logo {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #1a56db, #7e3af2);
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+    }
+    .week-badge {
+      background: var(--blue-dim); color: var(--blue);
+      font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+      border: 1px solid #1f4080;
+    }
+    .header-sub { color: var(--text-muted); font-weight: 400; }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+
+    button {
+      cursor: pointer; border: none; border-radius: var(--radius);
+      font-size: 13px; font-weight: 500;
+      transition: opacity 0.15s, transform 0.1s;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .btn-ghost {
+      background: transparent; color: var(--text-muted);
+      border: 1px solid var(--border); padding: 6px 12px;
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+    .btn-primary { background: #1a56db; color: #fff; padding: 8px 16px; }
+    .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+    .btn-secondary {
+      background: var(--surface-2); color: var(--text);
+      border: 1px solid var(--border); padding: 8px 16px;
+    }
+    .btn-secondary:hover:not(:disabled) { background: var(--surface-3); }
+    .btn-danger { background: #6b2020; color: var(--red); border: 1px solid #8b3030; padding: 8px 16px; }
+    .btn-danger:hover:not(:disabled) { background: #7d2020; }
+    .btn-demo {
+      background: transparent; color: var(--blue);
+      border: 1px solid var(--blue-dim); padding: 5px 12px; font-size: 12px;
+    }
+    .btn-demo:hover:not(:disabled) { background: var(--blue-dim); }
+
+    #health-chip {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px;
+      font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text-muted);
+    }
+    #health-chip:hover { background: var(--surface-3); }
+    #health-chip.online  { color: var(--green); border-color: #1a4a2e; }
+    #health-chip.offline { color: var(--red); border-color: #4a1a1a; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+    .online  .dot { background: var(--green); box-shadow: 0 0 6px #3fb95088; animation: pulse 2s infinite; }
+    .offline .dot { background: var(--red); }
+    @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.5} }
+
+    .left-panel {
+      display: flex; flex-direction: column; overflow-y: auto;
+      border-right: 1px solid var(--border);
+    }
+    .panel-section { padding: 16px; border-bottom: 1px solid var(--border); }
+    .panel-section:last-child { border-bottom: none; }
+
+    label {
+      display: block; font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); margin-bottom: 8px;
+    }
+    textarea, input[type="text"], input[type="number"], select {
+      width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); font-size: 13px;
+      font-family: inherit; outline: none; transition: border-color 0.15s;
+    }
+    textarea { resize: none; }
+    textarea:focus, input:focus, select:focus {
+      border-color: var(--blue); box-shadow: 0 0 0 3px #1a56db22;
+    }
+    #notes { flex: 1; min-height: 0; height: 0; padding: 10px 12px; line-height: 1.6; }
+    input[type="text"], input[type="number"], select { padding: 8px 12px; height: 36px; }
+
+    .input-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .action-btns { display: flex; flex-direction: column; gap: 8px; padding: 16px; flex-shrink: 0; }
+    .action-btns button { width: 100%; justify-content: center; }
+
+    .right-panel { display: flex; flex-direction: column; overflow: hidden; }
+    .pane { display: flex; flex-direction: column; overflow: hidden; }
+    .pane-output { flex: 1; border-bottom: 1px solid var(--border); }
+    .pane-logs { height: 200px; flex-shrink: 0; }
+
+    .pane-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--text-muted); flex-shrink: 0;
+    }
+    .pane-body {
+      flex: 1; overflow-y: auto; padding: 16px;
+      font-family: var(--mono); font-size: 13px; line-height: 1.6;
+    }
+    .pane-body::-webkit-scrollbar { width: 6px; }
+    .pane-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .placeholder-msg { color: var(--text-muted); font-family: inherit; font-size: 13px; font-style: italic; }
+    .j-k { color: #79c0ff; } .j-s { color: #a5d6ff; } .j-n { color: #ffa657; }
+    .j-b { color: #7ee787; } .j-null { color: var(--text-muted); }
+
+    .log-entry { display: flex; gap: 10px; padding: 2px 0; font-size: 12px; line-height: 1.5; }
+    .log-ts    { color: var(--text-muted); flex-shrink: 0; }
+    .log-level { font-weight: 700; flex-shrink: 0; width: 50px; }
+    .log-msg   { color: var(--text); word-break: break-word; }
+    .log-info    .log-level { color: var(--blue); }
+    .log-success .log-level { color: var(--green); }
+    .log-warn    .log-level { color: var(--orange); }
+    .log-error   .log-level { color: var(--red); }
+
+    .spinner {
+      display: none; width: 14px; height: 14px;
+      border: 2px solid var(--border); border-top-color: var(--blue);
+      border-radius: 50%; animation: spin 0.6s linear infinite; flex-shrink: 0;
+    }
+    .spinner.active { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: var(--red-dim); border: 1px solid #6b2020;
+      border-radius: var(--radius); padding: 12px;
+      color: var(--red); font-family: var(--mono); font-size: 12px; white-space: pre-wrap;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       TAB SYSTEM
+       ═══════════════════════════════════════════════════════════ */
+    .tab-bar {
+      display: flex; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 16px; flex-shrink: 0; gap: 0;
+    }
+    .tab-btn {
+      background: none; border: none; color: var(--text-muted);
+      padding: 11px 18px; cursor: pointer; font-size: 13px; font-weight: 500;
+      border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+    .tab-btn:active { transform: none; }
+
+    .tab-pane { display: none; flex: 1; overflow: hidden; }
+    .tab-pane.active { display: grid; grid-template-columns: 380px 1fr; }
+
+    /* ═══════════════════════════════════════════════════════════
+       WEEK-SPECIFIC
+       ═══════════════════════════════════════════════════════════ */
+    :root { --indigo: #818cf8; --indigo-dim: #1e1b4b; }
+
+    .meta-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--indigo-dim); color: var(--indigo);
+      border: 1px solid #312e81; border-radius: 4px;
+      font-size: 11px; font-weight: 600; padding: 2px 8px; font-family: var(--mono);
+    }
+    .result-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px; margin-top: 12px;
+    }
+    .result-card .rc-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+    .result-card .rc-val { font-size: 14px; color: var(--text); word-break: break-word; line-height: 1.6; }
+    .result-card .rc-meta { font-size: 11px; color: var(--text-muted); margin-top: 8px; font-family: var(--mono); }
+
+    /* Fine-tune form */
+    .form-row { display: flex; gap: 10px; }
+    .form-row .form-group { flex: 1; }
+    .form-group { margin-bottom: 12px; }
+    .form-group > label { margin-bottom: 4px; }
+
+    /* Progress bar */
+    .progress-track {
+      background: var(--surface-2); border-radius: 4px;
+      height: 8px; overflow: hidden; margin: 6px 0 10px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--blue), var(--green));
+      border-radius: 4px; transition: width 0.3s ease; width: 0%;
+    }
+
+    /* Status badge */
+    .status-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 12px;
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .badge-idle     { background: var(--surface-2); color: var(--text-muted); }
+    .badge-starting { background: rgba(88,166,255,.12); color: var(--blue); }
+    .badge-running  { background: rgba(210,153,34,.15); color: var(--orange); }
+    .badge-done     { background: rgba(63,185,80,.15); color: var(--green); }
+    .badge-error    { background: rgba(248,81,73,.15); color: var(--red); }
+
+    /* Status row */
+    .status-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; flex-wrap: wrap; }
+    .status-row span { font-size: 12px; color: var(--text-muted); font-family: var(--mono); }
+
+    /* Chart container */
+    .chart-wrapper { position: relative; width: 100%; }
+
+    /* Eval accuracy display */
+    .accuracy-hero { text-align: center; padding: 16px 0 8px; }
+    .accuracy-num { font-size: 3.2rem; font-weight: 800; color: var(--green); line-height: 1; }
+    .accuracy-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; font-family: var(--mono); }
+
+    /* Eval table */
+    .eval-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .eval-table th, .eval-table td {
+      padding: 6px 10px; border-bottom: 1px solid var(--border); text-align: left;
+    }
+    .eval-table th {
+      background: var(--surface); color: var(--text-muted);
+      font-weight: 600; position: sticky; top: 0; z-index: 1;
+      font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+    }
+    .eval-table tr:hover td { background: var(--surface-2); }
+    .pass-chip { padding: 1px 6px; border-radius: 10px; font-size: 10px; font-weight: 700; }
+    .pass-chip.pass { background: rgba(63,185,80,.2); color: var(--green); }
+    .pass-chip.fail { background: rgba(248,81,73,.2); color: var(--red); }
+
+    /* ── Expandable eval rows ─────────────────────────────────── */
+    .eval-row { cursor: pointer; user-select: none; }
+    .eval-row:hover td { background: var(--surface-2); }
+    .eval-row.expanded > td { background: var(--surface-2); }
+    .eval-toggle { color: var(--text-muted); font-size: 11px;
+      display: inline-block; width: 14px; transition: color .15s; }
+    .eval-row:hover .eval-toggle { color: var(--blue); }
+
+    .eval-detail > td { padding: 0 !important; border-bottom: 2px solid var(--blue-dim) !important; }
+    .eval-detail-inner {
+      padding: 12px 12px 14px 34px;
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      background: var(--surface);
+    }
+    .eval-detail-block { display: flex; flex-direction: column; gap: 4px; }
+    .eval-detail-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .06em; color: var(--text-muted);
+    }
+    .eval-detail-text {
+      font-size: 12px; color: var(--text); line-height: 1.6;
+      background: var(--surface-2); border-radius: 4px; padding: 8px;
+      white-space: pre-wrap; word-break: break-word; font-family: inherit;
+    }
+    .eval-think-block {
+      background: var(--surface-3); border-left: 2px solid var(--border);
+      color: var(--text-muted); font-size: 11px; line-height: 1.5;
+      padding: 6px 8px; border-radius: 0 4px 4px 0;
+      white-space: pre-wrap; word-break: break-word; margin-bottom: 6px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-title">
+    <div class="logo">🤖</div>
+    Applied GenAI & Agentic AI Engineering Course
+    <span class="week-badge">Week 8</span>
+    <span class="header-sub">- SpecialistTuner (LoRA)</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn-ghost" onclick="window.open('http://localhost:8000/readme','_blank')">📖 README</button>
+    <div id="health-chip" onclick="checkHealth()" title="Click to re-check">
+      <span class="dot"></span><span id="health-text">Checking…</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── Tab bar ── -->
+<nav class="tab-bar">
+  <button class="tab-btn active" id="tbtn-inference" onclick="setTab('inference')">🧠 Inference</button>
+  <button class="tab-btn"        id="tbtn-finetune"  onclick="setTab('finetune')">⚙️ Fine-Tune</button>
+  <button class="tab-btn"        id="tbtn-eval"      onclick="setTab('eval')">📊 Eval</button>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TAB 1: Inference (existing, preserved)
+     ═══════════════════════════════════════════════════════════ -->
+<div class="tab-pane active" id="tab-inference">
+
+  <div class="left-panel">
+    <div class="panel-section" style="flex:1;display:flex;flex-direction:column;">
+      <div class="input-row">
+        <label style="margin:0">Message</label>
+        <button class="btn-demo" onclick="fillDemo()">↺ Fill Demo</button>
+      </div>
+      <textarea id="notes" placeholder="Ask the fine-tuned specialist model something…"></textarea>
+    </div>
+    <div class="panel-section">
+      <div class="input-row" style="margin-bottom:6px">
+        <label style="margin:0">Adapter / Checkpoint</label>
+        <button class="btn-demo" onclick="loadCheckpoints()" title="Rescan out/ for new checkpoints">↺ Refresh</button>
+      </div>
+      <select id="adapter-path" onchange="onCpSelectChange('adapter-path','adapter-path-custom')">
+        <option value="">- base model only (no adapter) -</option>
+        <option value="__custom__">✏️ Enter custom path…</option>
+      </select>
+      <input type="text" id="adapter-path-custom" placeholder="out/checkpoint-82 or out/adapter"
+             style="margin-top:6px;display:none" />
+      <div style="margin-top:6px;font-size:11px;color:var(--text-muted)">
+        PEFT adapter directory (relative to server cwd). Rescan after training finishes.
+      </div>
+    </div>
+    <div class="action-btns">
+      <button class="btn-primary" id="btn-infer" onclick="doInfer()">
+        <span id="spin-m" class="spinner"></span>🧠 &nbsp;Run Inference
+      </button>
+      <button class="btn-secondary" onclick="checkHealth()">♥ &nbsp;Re-check Health</button>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <div class="pane pane-output">
+      <div class="pane-header">
+        Output
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="output-tag" style="font-size:11px;color:var(--text-muted)"></span>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px;display:none" id="btn-format" onclick="toggleFormat()">{ } Format</button>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearOutput()">✕ Clear</button>
+        </div>
+      </div>
+      <div class="pane-body" id="output-body">
+        <span class="placeholder-msg">Run inference to see the LoRA model's response here…</span>
+      </div>
+    </div>
+    <div class="pane pane-logs">
+      <div class="pane-header">
+        Logs
+        <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearLogs()">✕ Clear</button>
+      </div>
+      <div class="pane-body" id="logs-body">
+        <span class="placeholder-msg">Request logs will appear here…</span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /tab-inference -->
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     TAB 2: Fine-Tune
+     ═══════════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-finetune">
+
+  <div class="left-panel" style="overflow-y:auto">
+
+    <div class="panel-section">
+      <label>Training Config</label>
+
+      <div class="form-group">
+        <label>Dataset path</label>
+        <input type="text" id="ft-dataset" value="data/specialisttuner.jsonl" />
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>LoRA rank r</label>
+          <select id="ft-rank">
+            <option value="4">4</option>
+            <option value="8" selected>8</option>
+            <option value="16">16</option>
+            <option value="32">32</option>
+            <option value="64">64</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Alpha</label>
+          <input type="number" id="ft-alpha" value="16" min="1" max="256" />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Epochs</label>
+          <input type="number" id="ft-epochs" value="4" min="1" max="20" />
+        </div>
+        <div class="form-group">
+          <label>Learning rate</label>
+          <input type="text" id="ft-lr" value="2e-4" />
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <label>Status</label>
+      <div class="status-row">
+        <span class="status-badge badge-idle" id="train-badge">idle</span>
+        <span id="train-step-text" style="font-family:var(--mono);font-size:12px">Step 0 / 0</span>
+        <span id="train-epoch-text" style="font-family:var(--mono);font-size:12px">Epoch 0 / 0</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="train-prog"></div></div>
+      <div style="font-size:11px;color:var(--text-muted);font-family:var(--mono)" id="train-params">
+        Trainable params: -
+      </div>
+    </div>
+
+    <div class="action-btns">
+      <button class="btn-primary" id="btn-start-train" onclick="doStartTraining()">
+        <span id="spin-ft" class="spinner"></span>▶ Start Training
+      </button>
+      <button class="btn-danger" id="btn-stop-train" onclick="doStopTraining()" disabled>
+        ⏹ Stop
+      </button>
+    </div>
+
+    <div class="panel-section" style="border-top:1px solid var(--border)">
+      <div style="font-size:11px;color:var(--text-muted);line-height:1.6">
+        Runs on CPU (Qwen3-0.6B, ~40 min on a laptop) - no GPU required. The
+        same QLoRA recipe scales to 8B on a 12–16 GB consumer GPU. Training runs
+        in the background - poll is every 2 s. Checkpoints written under <code style="background:var(--surface-3);padding:1px 4px;border-radius:3px">out/</code> - the best-eval one (e.g. <code style="background:var(--surface-3);padding:1px 4px;border-radius:3px">out/checkpoint-82</code>) is the artifact to keep.
+      </div>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <!-- Loss chart -->
+    <div class="pane" style="flex:1;border-bottom:1px solid var(--border)">
+      <div class="pane-header">Loss Chart</div>
+      <div class="pane-body" style="overflow:hidden;padding:16px;display:flex;flex-direction:column">
+        <div class="chart-wrapper" style="flex:1;min-height:0">
+          <canvas id="loss-chart" style="width:100%;height:100%"></canvas>
+        </div>
+      </div>
+    </div>
+    <!-- Training log -->
+    <div class="pane" style="height:170px;flex-shrink:0">
+      <div class="pane-header">
+        Training Logs
+        <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearFtLog()">✕ Clear</button>
+      </div>
+      <div class="pane-body" id="ft-logs-body">
+        <span class="placeholder-msg">Start training to see live step progress here…</span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /tab-finetune -->
+
+
+<!-- ═══════════════════════════════════════════════════════════
+     TAB 3: Eval
+     ═══════════════════════════════════════════════════════════ -->
+<div class="tab-pane" id="tab-eval">
+
+  <div class="left-panel" style="overflow-y:auto">
+    <div class="panel-section">
+      <label>Eval Config</label>
+      <div class="form-group">
+        <label>Eval file path</label>
+        <input type="text" id="eval-path" value="data/eval_aiayn.jsonl" />
+      </div>
+      <div class="form-group">
+        <div class="input-row" style="margin-bottom:4px">
+          <label style="margin:0">Adapter / Checkpoint</label>
+          <button class="btn-demo" style="font-size:11px;padding:3px 8px" onclick="loadCheckpoints()" title="Rescan out/">↺</button>
+        </div>
+        <select id="eval-adapter" onchange="onCpSelectChange('eval-adapter','eval-adapter-custom')">
+          <option value="">- base model only (no adapter) -</option>
+          <option value="__custom__">✏️ Enter custom path…</option>
+        </select>
+        <input type="text" id="eval-adapter-custom" placeholder="out/checkpoint-82 or leave blank"
+               style="margin-top:6px;display:none" />
+      </div>
+    </div>
+
+    <div class="panel-section" id="eval-summary-section" style="display:none">
+      <label>Overall Accuracy</label>
+      <div class="accuracy-hero">
+        <div class="accuracy-num" id="eval-accuracy-num">-</div>
+        <div class="accuracy-sub" id="eval-summary-text">0 / 0 passed</div>
+      </div>
+    </div>
+
+    <div class="action-btns">
+      <button class="btn-primary" id="btn-run-eval" onclick="doRunEval()">
+        <span id="spin-eval" class="spinner"></span>▶ Run Eval
+      </button>
+    </div>
+
+    <div class="panel-section">
+      <div style="font-size:11px;color:var(--text-muted);line-height:1.6">
+        42 short-answer questions from "Attention Is All You Need".<br>
+        Scoring: pass if any <code style="background:var(--surface-3);padding:1px 4px;border-radius:3px">accept</code>
+        string appears in the response (case-insensitive substring).
+      </div>
+    </div>
+  </div>
+
+  <div class="right-panel">
+    <!-- Category accuracy chart -->
+    <div class="pane" style="flex:0 0 230px;border-bottom:1px solid var(--border)">
+      <div class="pane-header">Accuracy by Category</div>
+      <div class="pane-body" style="overflow:hidden;padding:12px;display:flex;flex-direction:column">
+        <div class="chart-wrapper" style="flex:1;min-height:0">
+          <canvas id="eval-chart" style="width:100%;height:100%"></canvas>
+        </div>
+      </div>
+    </div>
+    <!-- Results table -->
+    <div class="pane" style="flex:1">
+      <div class="pane-header">
+        Question Results
+        <span id="eval-count-label" style="font-size:11px;color:var(--text-muted)"></span>
+      </div>
+      <div class="pane-body" style="padding:0;overflow-y:auto" id="eval-table-body">
+        <span class="placeholder-msg" style="padding:16px;display:block">Run eval to see question-by-question results…</span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /tab-eval -->
+
+
+<script>
+  /* ═════════════════════════════════════════════════════════════
+     CORE
+     ═════════════════════════════════════════════════════════════ */
+  const API = 'http://localhost:8000';
+  let _rawOutputText = '';
+  let _isFormatted   = false;
+
+  function _fmtDetail(d, fb) {
+    if (!d) return fb || 'Unknown error';
+    if (typeof d === 'string') return d;
+    if (Array.isArray(d)) return d.map(x => x.msg || JSON.stringify(x)).join(' | ');
+    return JSON.stringify(d);
+  }
+  function _showFormatBtn(show) {
+    document.getElementById('btn-format').style.display = show ? '' : 'none';
+    _isFormatted = false;
+    document.getElementById('btn-format').textContent = '{ } Format';
+  }
+  function toggleFormat() {
+    const body = document.getElementById('output-body');
+    const btn  = document.getElementById('btn-format');
+    if (!_isFormatted) {
+      try {
+        body.innerHTML = `<pre>${highlightJSON(JSON.parse(_rawOutputText))}</pre>`;
+        _isFormatted = true; btn.textContent = '≡ Raw';
+        addLog('info', 'Output formatted as JSON.');
+      } catch { addLog('warn', 'Could not parse output as JSON.'); }
+    } else {
+      body.textContent = _rawOutputText;
+      _isFormatted = false; btn.textContent = '{ } Format';
+    }
+  }
+  async function checkHealth() {
+    const chip = document.getElementById('health-chip');
+    const txt  = document.getElementById('health-text');
+    chip.className = ''; txt.textContent = 'Checking…';
+    try {
+      const r    = await fetch(`${API}/health`);
+      const data = await r.json();
+      chip.className = 'online'; txt.textContent = `Online · ${data.model}`;
+      addLog('success', `Health OK - model: ${escHtml(data.model)}`);
+    } catch (e) {
+      chip.className = 'offline'; txt.textContent = 'Offline';
+      addLog('error', `Health check failed - is the server running? (${e.message})`);
+    }
+  }
+  function clearOutput() {
+    document.getElementById('output-body').innerHTML =
+      "<span class='placeholder-msg'>Run inference to see the LoRA model's response here…</span>";
+    document.getElementById('output-tag').textContent = '';
+    _rawOutputText = ''; _showFormatBtn(false);
+  }
+  function clearLogs() {
+    document.getElementById('logs-body').innerHTML =
+      "<span class='placeholder-msg'>Request logs will appear here…</span>";
+  }
+  function addLog(level, msg) {
+    _appendLog('logs-body', level, msg);
+  }
+  function _appendLog(id, level, msg) {
+    const body = document.getElementById(id);
+    const ph   = body.querySelector('.placeholder-msg');
+    if (ph) ph.remove();
+    const now = new Date().toLocaleTimeString('en-GB', {hour12:false});
+    const div = document.createElement('div');
+    div.className = `log-entry log-${level}`;
+    div.innerHTML =
+      `<span class="log-ts">${now}</span>` +
+      `<span class="log-level">${level.toUpperCase()}</span>` +
+      `<span class="log-msg">${escHtml(msg)}</span>`;
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  }
+  function highlightJSON(obj) {
+    const str = JSON.stringify(obj, null, 2);
+    return escHtml(str).replace(
+      /(&quot;(?:\\u[0-9a-fA-F]{4}|\\[^u]|[^\\&])*&quot;(?:\s*:)?|\b(?:true|false)\b|\bnull\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      m => {
+        let c = 'n';
+        if (m.startsWith('&quot;')) c = m.endsWith(':') ? 'k' : 's';
+        else if (m === 'true' || m === 'false') c = 'b';
+        else if (m === 'null') c = 'null';
+        return `<span class="j-${c}">${m}</span>`;
+      }
+    );
+  }
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function setLoading(active) {
+    const tab = document.querySelector('.tab-pane.active');
+    if (!tab) return;
+    tab.querySelectorAll('.action-btns button').forEach(b => b.disabled = active);
+    tab.querySelectorAll('.spinner').forEach(s => s.classList.toggle('active', active));
+  }
+
+  /* ═════════════════════════════════════════════════════════════
+     TAB SWITCHING
+     ═════════════════════════════════════════════════════════════ */
+  function setTab(name) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    document.getElementById('tbtn-' + name).classList.add('active');
+    if (name === 'finetune' && lossChart) lossChart.resize();
+    if (name === 'eval' && evalChart) evalChart.resize();
+    // Refresh checkpoint list whenever a tab that uses adapters becomes visible
+    if (name === 'inference' || name === 'eval') loadCheckpoints();
+  }
+
+  /* ═════════════════════════════════════════════════════════════
+     INFERENCE TAB
+     ═════════════════════════════════════════════════════════════ */
+  const DEMO_NOTES = 'What BLEU score did the big Transformer achieve on WMT 2014 English-to-German translation, and how does it compare to the previous best models?';
+  function fillDemo() {
+    document.getElementById('notes').value = DEMO_NOTES;
+    addLog('info', 'Demo message loaded.');
+  }
+  async function doInfer() {
+    const msg     = document.getElementById('notes').value.trim();
+    const adapter = getAdapterVal('adapter-path', 'adapter-path-custom');
+    if (!msg) { addLog('warn', 'Message is empty - type something first.'); return; }
+    clearOutput(); setLoading(true);
+    const adapterLabel = adapter || 'base model';
+    document.getElementById('output-tag').textContent = 'POST /v1/chat/completions';
+    addLog('info', `POST /v1/chat/completions  adapter=${adapterLabel}`);
+    const payload = { messages:[{role:'user',content:msg}], max_new_tokens:256, temperature:0.2 };
+    // Only append ?adapter=... when an adapter is actually selected
+    const url = adapter
+      ? `${API}/v1/chat/completions?adapter=${encodeURIComponent(adapter)}`
+      : `${API}/v1/chat/completions`;
+    try {
+      const r    = await fetch(url, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+      document.getElementById('output-body').innerHTML = `
+        <div class="result-card">
+          <div class="rc-label">Response</div>
+          <div class="rc-val">${escHtml(data.output)}</div>
+          <div class="rc-meta">
+            <span class="meta-chip">model: ${escHtml(data.model_id)}</span>
+            &nbsp;<span class="meta-chip">latency: ${data.latency_ms.toFixed(0)} ms</span>
+          </div>
+        </div>`;
+      _rawOutputText = JSON.stringify(data, null, 2); _showFormatBtn(true);
+      addLog('success', `Done - ${data.latency_ms.toFixed(0)} ms · finish: ${data.finish_reason}`);
+    } catch (e) {
+      document.getElementById('output-body').innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally { setLoading(false); }
+  }
+
+  /* ═════════════════════════════════════════════════════════════
+     CHECKPOINT SELECT HELPERS  (shared: Inference + Eval tabs)
+     ═════════════════════════════════════════════════════════════ */
+  // Descriptors for every adapter select on the page
+  const CP_SELECTS = [
+    { selectId: 'adapter-path',  customId: 'adapter-path-custom' },
+    { selectId: 'eval-adapter',  customId: 'eval-adapter-custom' },
+  ];
+
+  /** Show / hide custom path text input when the select changes. */
+  function onCpSelectChange(selectId, customId) {
+    const custom = document.getElementById(customId);
+    if (custom)
+      custom.style.display =
+        document.getElementById(selectId).value === '__custom__' ? '' : 'none';
+  }
+
+  /** Return the effective adapter path string (null = base model only). */
+  function getAdapterVal(selectId, customId) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return null;
+    if (sel.value === '__custom__') {
+      const c = document.getElementById(customId);
+      return (c && c.value.trim()) || null;
+    }
+    return sel.value || null;   // '' → null (base model)
+  }
+
+  /** Fetch /v1/checkpoints and repopulate every CP_SELECTS entry. */
+  async function loadCheckpoints() {
+    try {
+      const r = await fetch(`${API}/v1/checkpoints`);
+      if (!r.ok) return;
+      const paths = await r.json();   // e.g. ["out/adapter","out/checkpoint-164"]
+
+      CP_SELECTS.forEach(({ selectId, customId }) => {
+        const sel = document.getElementById(selectId);
+        if (!sel) return;
+        const prev = sel.value;
+
+        // Rebuild: blank (base) + each dir + custom entry
+        sel.innerHTML =
+          '<option value="">- base model only (no adapter) -</option>' +
+          paths.map(p => {
+            const name = p.split('/').pop();
+            return `<option value="${escHtml(p)}">${escHtml(name)}</option>`;
+          }).join('') +
+          '<option value="__custom__">✏️ Enter custom path…</option>';
+
+        // Restore previous selection; otherwise pick "adapter" or newest checkpoint
+        if (prev && prev !== '__custom__' && paths.includes(prev)) {
+          sel.value = prev;
+        } else if (paths.length > 0) {
+          const preferred = paths.find(p => /[/\\]adapter$/.test(p));
+          sel.value = preferred || paths[paths.length - 1];
+        }
+        onCpSelectChange(selectId, customId);
+      });
+    } catch { /* server not running yet - silently ignore */ }
+  }
+
+  /* ═════════════════════════════════════════════════════════════
+     FINE-TUNE TAB
+     ═════════════════════════════════════════════════════════════ */
+  let lossChart = null;
+  let _trainPollInterval = null;
+
+  function ftAddLog(level, msg) { _appendLog('ft-logs-body', level, msg); }
+  function clearFtLog() {
+    document.getElementById('ft-logs-body').innerHTML =
+      "<span class='placeholder-msg'>Start training to see live step progress here…</span>";
+  }
+
+  function initLossChart() {
+    const ctx = document.getElementById('loss-chart');
+    if (!ctx || lossChart) return;
+    lossChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          { label:'Train Loss', data:[], borderColor:'#58a6ff', backgroundColor:'rgba(88,166,255,.1)',
+            tension:.35, pointRadius:2, borderWidth:2 },
+          { label:'Eval Loss',  data:[], borderColor:'#f0883e', backgroundColor:'rgba(240,136,62,.1)',
+            tension:.35, pointRadius:5, borderWidth:2, pointStyle:'circle' },
+        ]
+      },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        animation:{ duration:150 },
+        plugins:{ legend:{ labels:{ color:'#7d8590', font:{size:11} } } },
+        scales:{
+          x:{ ticks:{color:'#7d8590',maxTicksLimit:8}, grid:{color:'#21262d'},
+              title:{display:true,text:'Step',color:'#7d8590',font:{size:11}} },
+          y:{ ticks:{color:'#7d8590'}, grid:{color:'#21262d'},
+              title:{display:true,text:'Loss',color:'#7d8590',font:{size:11}} }
+        }
+      }
+    });
+  }
+
+  async function doStartTraining() {
+    const payload = {
+      dataset_path: document.getElementById('ft-dataset').value.trim(),
+      r:      parseInt(document.getElementById('ft-rank').value),
+      alpha:  parseInt(document.getElementById('ft-alpha').value),
+      epochs: parseInt(document.getElementById('ft-epochs').value),
+      lr:     parseFloat(document.getElementById('ft-lr').value),
+    };
+    ftAddLog('info', 'POST /v1/fine-tune/start - ' + JSON.stringify(payload));
+    document.getElementById('btn-start-train').disabled = true;
+    document.getElementById('btn-stop-train').disabled = false;
+    document.getElementById('spin-ft').classList.add('active');
+    try {
+      const r = await fetch(`${API}/v1/fine-tune/start`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || r.statusText);
+      ftAddLog('success', data.message || 'Training started');
+      startTrainPoll();
+    } catch (e) {
+      ftAddLog('error', e.message);
+      document.getElementById('btn-start-train').disabled = false;
+      document.getElementById('btn-stop-train').disabled = true;
+      document.getElementById('spin-ft').classList.remove('active');
+    }
+  }
+
+  async function doStopTraining() {
+    ftAddLog('warn', 'Sending stop signal…');
+    try {
+      const r = await fetch(`${API}/v1/fine-tune/stop`, {method:'POST'});
+      const data = await r.json();
+      ftAddLog('info', data.message || 'Stop signal sent');
+    } catch (e) { ftAddLog('error', e.message); }
+  }
+
+  function startTrainPoll() {
+    if (_trainPollInterval) return;
+    _trainPollInterval = setInterval(async () => {
+      try {
+        const r = await fetch(`${API}/v1/fine-tune/status`);
+        const s = await r.json();
+        updateTrainUI(s);
+        if (['done','error','idle'].includes(s.status)) {
+          clearInterval(_trainPollInterval); _trainPollInterval = null;
+          document.getElementById('btn-start-train').disabled = false;
+          document.getElementById('btn-stop-train').disabled = true;
+          document.getElementById('spin-ft').classList.remove('active');
+          if (s.status === 'done') {
+            ftAddLog('success', 'Training complete! Checkpoints saved under out/ - pick the best-eval one (see /v1/checkpoints)');
+            loadCheckpoints();  // auto-refresh dropdown on both tabs
+          } else if (s.status === 'error')
+            ftAddLog('error', 'Training failed: ' + (s.error || 'unknown'));
+        } else {
+          ftAddLog('info', `Step ${s.step}/${s.total}  epoch ${s.epoch}/${s.epochs}` +
+            (s.train_loss.length ? `  loss ${s.train_loss.at(-1).loss}` : ''));
+        }
+      } catch (e) { ftAddLog('error', 'Poll failed: ' + e.message); }
+    }, 2000);
+  }
+
+  function updateTrainUI(s) {
+    const badge = document.getElementById('train-badge');
+    badge.textContent = s.status;
+    badge.className = 'status-badge badge-' + (s.status || 'idle');
+    document.getElementById('train-step-text').textContent = `Step ${s.step} / ${s.total}`;
+    document.getElementById('train-epoch-text').textContent = `Epoch ${s.epoch} / ${s.epochs}`;
+    const pct = s.total > 0 ? Math.min(100, Math.round(s.step / s.total * 100)) : 0;
+    document.getElementById('train-prog').style.width = pct + '%';
+    if (s.trainable_params > 0) {
+      const m = (s.trainable_params / 1e6).toFixed(2);
+      document.getElementById('train-params').textContent = `Trainable params: ${m}M`;
+    }
+    // Update chart
+    if (!lossChart || !s.train_loss || !s.train_loss.length) return;
+    lossChart.data.labels = s.train_loss.map(p => p.step);
+    lossChart.data.datasets[0].data = s.train_loss.map(p => p.loss);
+    if (s.eval_loss && s.eval_loss.length) {
+      // Space eval_loss points across the same label range
+      const ratio = Math.floor(s.train_loss.length / s.eval_loss.length);
+      const padded = new Array(s.train_loss.length).fill(null);
+      s.eval_loss.forEach((p, i) => { padded[Math.min((i + 1) * ratio - 1, padded.length - 1)] = p.loss; });
+      lossChart.data.datasets[1].data = padded;
+    }
+    lossChart.update('none');
+  }
+
+  /* ═════════════════════════════════════════════════════════════
+     EVAL TAB
+     ═════════════════════════════════════════════════════════════ */
+  let evalChart = null;
+
+  function initEvalChart() {
+    const ctx = document.getElementById('eval-chart');
+    if (!ctx || evalChart) return;
+    evalChart = new Chart(ctx, {
+      type: 'bar',
+      data: { labels:[], datasets:[{ label:'Accuracy %', data:[], backgroundColor:[] }] },
+      options: {
+        indexAxis:'y', responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false},
+          tooltip:{ callbacks:{ label: ctx => ` ${ctx.raw.toFixed(1)}%` } } },
+        scales:{
+          x:{ min:0, max:100, ticks:{color:'#7d8590', callback:v=>v+'%'}, grid:{color:'#21262d'} },
+          y:{ ticks:{color:'#e6edf3', font:{size:11}}, grid:{display:false} }
+        }
+      }
+    });
+  }
+
+  async function doRunEval() {
+    const payload = {
+      eval_path:    document.getElementById('eval-path').value.trim(),
+      adapter_path: getAdapterVal('eval-adapter', 'eval-adapter-custom'),
+    };
+    document.getElementById('btn-run-eval').disabled = true;
+    document.getElementById('spin-eval').classList.add('active');
+    _appendLog('ft-logs-body','info','Running eval… (may take minutes on GPU)');
+
+    try {
+      const r = await fetch(`${API}/v1/eval/run`, {
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.detail || r.statusText);
+      renderEvalResults(data);
+    } catch (e) {
+      document.getElementById('eval-table-body').innerHTML =
+        `<div class="error-box" style="margin:16px">${escHtml(e.message)}</div>`;
+    } finally {
+      document.getElementById('btn-run-eval').disabled = false;
+      document.getElementById('spin-eval').classList.remove('active');
+    }
+  }
+
+  /** Split Qwen3 <think>…</think> from the actual answer. */
+  function parseThink(text) {
+    const m = (text || '').match(/^<think>([\s\S]*?)<\/think>\s*/);
+    if (!m) return { thinking: '', answer: text || '' };
+    return { thinking: m[1].trim(), answer: text.slice(m[0].length).trim() };
+  }
+
+  /** Toggle expand / collapse for eval result row at index `idx`. */
+  function toggleEvalRow(idx) {
+    const detail = document.getElementById('eval-detail-' + idx);
+    const toggle = document.getElementById('eval-toggle-' + idx);
+    const row    = document.getElementById('eval-row-' + idx);
+    const open   = detail.style.display !== 'none';
+    detail.style.display  = open ? 'none' : 'table-row';
+    toggle.textContent    = open ? '▸' : '▾';
+    row.classList.toggle('expanded', !open);
+  }
+
+  function renderEvalResults(data) {
+    const acc = data.accuracy || 0;
+    document.getElementById('eval-accuracy-num').textContent = acc.toFixed(1) + '%';
+    document.getElementById('eval-accuracy-num').style.color =
+      acc >= 80 ? 'var(--green)' : acc >= 50 ? 'var(--orange)' : 'var(--red)';
+    document.getElementById('eval-summary-text').textContent =
+      `${data.passed} / ${data.total} questions passed`;
+    document.getElementById('eval-summary-section').style.display = '';
+    document.getElementById('eval-count-label').textContent =
+      `${data.passed}/${data.total} passed`;
+
+    // Category chart
+    const cats   = data.by_category || {};
+    const labels = Object.keys(cats);
+    const values = Object.values(cats);
+    if (evalChart) {
+      evalChart.data.labels = labels;
+      evalChart.data.datasets[0].data = values;
+      evalChart.data.datasets[0].backgroundColor =
+        values.map(v => v >= 80 ? '#3fb950' : v >= 50 ? '#d29922' : '#f85149');
+      evalChart.update();
+    }
+
+    // Expandable results table
+    const rowsHtml = (data.results || []).map((r, i) => {
+      const { thinking, answer } = parseThink(r.got || '');
+      // Preview: use clean answer (no <think> tags), truncated to 42 chars
+      const preview = answer || r.got || '';
+
+      // Collapsed summary row - click anywhere to expand
+      const summaryRow = `
+        <tr class="eval-row" id="eval-row-${i}" onclick="toggleEvalRow(${i})">
+          <td><span class="eval-toggle" id="eval-toggle-${i}">▸</span></td>
+          <td style="color:var(--text-muted);font-family:var(--mono);font-size:11px">${r.id||''}</td>
+          <td style="max-width:190px">${escHtml((r.question||'').substring(0,54))}…</td>
+          <td><code style="font-size:10px;background:var(--surface-3);padding:1px 5px;border-radius:3px">${escHtml(r.expected)}</code></td>
+          <td style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+                     color:var(--text-muted)">${escHtml(preview.substring(0,42))}${preview.length>42?'…':''}</td>
+          <td><span class="pass-chip ${r.passed?'pass':'fail'}">${r.passed?'PASS':'FAIL'}</span></td>
+        </tr>`;
+
+      // Expanded detail row - spans all columns
+      const thinkBlock = thinking ? `
+        <div style="margin-bottom:6px">
+          <div class="eval-detail-label" style="margin-bottom:3px">🤔 Chain-of-thought</div>
+          <div class="eval-think-block">${escHtml(thinking)}</div>
+        </div>` : '';
+
+      const detailRow = `
+        <tr class="eval-detail" id="eval-detail-${i}" style="display:none">
+          <td colspan="6" style="padding:0;border-bottom:2px solid var(--blue-dim)">
+            <div class="eval-detail-inner">
+              <div class="eval-detail-block">
+                <div class="eval-detail-label">Full question</div>
+                <div class="eval-detail-text">${escHtml(r.question||'')}</div>
+              </div>
+              <div class="eval-detail-block">
+                <div class="eval-detail-label">Expected</div>
+                <div class="eval-detail-text" style="color:var(--green)">${escHtml(r.expected||'')}</div>
+                <div style="margin-top:10px">
+                  <div class="eval-detail-label" style="margin-bottom:4px">Model response</div>
+                  ${thinkBlock}
+                  <div class="eval-detail-text" style="${r.passed?'color:var(--green)':''}">${escHtml(answer||r.got||'')}</div>
+                </div>
+                <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                  <span class="pass-chip ${r.passed?'pass':'fail'}" style="font-size:11px">${r.passed?'✓ PASS':'✗ FAIL'}</span>
+                  <span style="font-size:11px;color:var(--text-muted);font-family:var(--mono)">${r.latency_ms?r.latency_ms.toFixed(0)+' ms':''}</span>
+                  <span style="font-size:11px;color:var(--text-muted)">${escHtml(r.category||'')}</span>
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>`;
+
+      return summaryRow + detailRow;
+    }).join('');
+
+    document.getElementById('eval-table-body').innerHTML = `
+      <table class="eval-table">
+        <thead><tr>
+          <th style="width:22px"></th>
+          <th>#</th><th>Question</th><th>Expected</th><th>Got</th><th>Result</th>
+        </tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>`;
+  }
+
+  /* ═════════════════════════════════════════════════════════════
+     INIT
+     ═════════════════════════════════════════════════════════════ */
+  document.addEventListener('DOMContentLoaded', () => {
+    initLossChart();
+    initEvalChart();
+    checkHealth();
+    loadCheckpoints();   // pre-populate adapter dropdowns from out/ on first load
+  });
+</script>
+</body>
+</html>

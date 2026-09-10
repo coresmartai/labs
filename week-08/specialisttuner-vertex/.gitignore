@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+data/aiayn_gcloud.jsonl
+out/
+logs/
+.DS_Store
+
+# Your own eval output. The memo rows are yours, not the repository's.
+results/

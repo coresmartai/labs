@@ -1,0 +1,25 @@
+# Vertex AI Gemini supervised fine-tuning + serving
+#
+# `vertexai` is NOT a separate dependency. The module ships inside
+# google-cloud-aiplatform, and the standalone PyPI package of that name is a
+# stale shim that stops at 1.71.1. Installing both puts two copies of the same
+# module on the path.
+#
+# Tested against 2.1.0 and against 1.165.1, the last release of the 1.x line.
+# If 2.x gives you trouble, 1.165.1 runs this package unchanged.
+google-cloud-aiplatform==2.1.0
+google-cloud-storage==3.14.1
+
+# Framework layer. These are the same pins as the local package, deliberately:
+# the two packages emit rows into one memo table and are read side by side.
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+tenacity==9.0.0
+markdown==3.7
+httpx==0.28.1
+
+# Tests
+pytest==8.3.4
+pytest-asyncio==0.24.0

@@ -1,0 +1,18 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+logs/
+.ipynb_checkpoints/
+.DS_Store
+
+# Training output. Your own runs land here and are not committed.
+out/*
+# ...except the four reference checkpoint folders. They carry the config and the
+# training history of the run this README describes, and no weights. The full
+# four-epoch loss curve is in out/checkpoint-164/trainer_state.json.
+!out/checkpoint-41/
+!out/checkpoint-82/
+!out/checkpoint-123/
+!out/checkpoint-164/
