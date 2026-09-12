@@ -1,0 +1,16 @@
+openai==2.14.0
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+pydantic==2.12.5
+pydantic-settings==2.6.1
+python-multipart==0.0.17
+markdown==3.7
+presidio-analyzer==2.2.364
+presidio-anonymizer==2.2.364
+spacy==3.8.16
+qdrant-client==1.12.0
+rank-bm25==0.2.2
+numpy==1.26.4
+pypdf==6.13.0
+httpx==0.27.2
+pytest==8.3.3

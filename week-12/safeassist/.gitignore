@@ -1,0 +1,20 @@
+.env
+qdrant_data/
+audit.jsonl
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.mypy_cache/
+*.log
+
+# ---- SafeAssist ----
+# Generated fixtures are NEVER committed. They are synthetic, they carry a
+# canary, and they are still not going into a shared repository. Regenerate
+# them with `python fixtures/generate.py`.
+fixtures/generated/
+
+# Runtime artefacts
+review_queue.jsonl
+telemetry.jsonl
+audit.jsonl

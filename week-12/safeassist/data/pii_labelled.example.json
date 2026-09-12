@@ -1,0 +1,28 @@
+[
+  {
+    "case_id": "p1",
+    "kind": "positive",
+    "text": "Referral note MRN-9001-4417: Alex Whitfield was seen in clinic on Tuesday.",
+    "spans": [
+      {"start": 14, "end": 27, "entity_type": "MRN"},
+      {"start": 29, "end": 43, "entity_type": "PERSON"}
+    ],
+    "note": "TASK 5: this is ONE case, as a shape to copy. You need at least ten."
+  },
+  {
+    "case_id": "n1",
+    "kind": "negative",
+    "text": "Imaging throughput rose from sixty-one percent to seventy-eight percent.",
+    "spans": [],
+    "note": "A negative case has no spans. Without negatives, precision cannot drop."
+  },
+  {
+    "case_id": "h1",
+    "kind": "hard",
+    "text": "Reach the duty registrar on 555-0134 if the ward does not answer.",
+    "spans": [
+      {"start": 28, "end": 36, "entity_type": "PHONE_NUMBER"}
+    ],
+    "note": "A hard case is one you expect the detector to get wrong. Without them, recall is measured only on the formats that always work."
+  }
+]
