@@ -1,0 +1,129 @@
+<svg viewBox="0 0 1200 760" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#EEF2FF"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+      <feOffset dx="0" dy="3" result="off"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="1200" height="760" fill="url(#bg)"/>
+  <text x="600" y="48" text-anchor="middle" font-family="system-ui, sans-serif" font-size="26" font-weight="700" fill="#0F172A">Cohort A2A Network at Session End</text>
+  <text x="600" y="76" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="#64748B">8 students · 8 AgentMesh services · 4 published MCP servers · live cross-student A2A tasks in flight</text>
+
+  <!-- Center label -->
+  <circle cx="600" cy="410" r="50" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1.5" stroke-dasharray="3,3"/>
+  <text x="600" y="405" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#475569">Cohort</text>
+  <text x="600" y="420" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#475569">A2A network</text>
+
+  <!-- 8 student nodes around a circle, radius 250, center (600, 410) -->
+  <!-- positions: 0deg right, going clockwise -->
+  <g>
+    <!-- 0deg: 850, 410 -->
+    <circle cx="850" cy="410" r="50" fill="#EEF2FF" stroke="#4F46E5" stroke-width="2.5" filter="url(#shadow)"/>
+    <text x="850" y="405" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#1E1B4B">Student 1</text>
+    <text x="850" y="420" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#4F46E5">:8001</text>
+    <text x="850" y="475" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#94A3B8">AgentMesh</text>
+
+    <!-- 45deg: 777, 587 -->
+    <circle cx="777" cy="587" r="50" fill="#EEF2FF" stroke="#4F46E5" stroke-width="2.5" filter="url(#shadow)"/>
+    <text x="777" y="582" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#1E1B4B">Student 2</text>
+    <text x="777" y="597" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#4F46E5">:8002</text>
+    <text x="777" y="652" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#94A3B8">AgentMesh</text>
+
+    <!-- 90deg: 600, 660 -->
+    <circle cx="600" cy="660" r="50" fill="#EEF2FF" stroke="#4F46E5" stroke-width="2.5" filter="url(#shadow)"/>
+    <text x="600" y="655" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#1E1B4B">Student 3</text>
+    <text x="600" y="670" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#4F46E5">:8003</text>
+    <text x="600" y="725" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#94A3B8">AgentMesh</text>
+
+    <!-- 135deg: 423, 587 -->
+    <circle cx="423" cy="587" r="50" fill="#EEF2FF" stroke="#4F46E5" stroke-width="2.5" filter="url(#shadow)"/>
+    <text x="423" y="582" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#1E1B4B">Student 4</text>
+    <text x="423" y="597" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#4F46E5">:8004</text>
+    <text x="423" y="652" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#94A3B8">AgentMesh</text>
+
+    <!-- 180deg: 350, 410 -->
+    <circle cx="350" cy="410" r="50" fill="#EEF2FF" stroke="#4F46E5" stroke-width="2.5" filter="url(#shadow)"/>
+    <text x="350" y="405" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#1E1B4B">Student 5</text>
+    <text x="350" y="420" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#4F46E5">:8005</text>
+    <text x="350" y="475" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#94A3B8">AgentMesh</text>
+
+    <!-- 225deg: 423, 233 -->
+    <circle cx="423" cy="233" r="50" fill="#EEF2FF" stroke="#4F46E5" stroke-width="2.5" filter="url(#shadow)"/>
+    <text x="423" y="228" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#1E1B4B">Student 6</text>
+    <text x="423" y="243" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#4F46E5">:8006</text>
+    <text x="423" y="298" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#94A3B8">AgentMesh</text>
+
+    <!-- 270deg: 600, 160 -->
+    <circle cx="600" cy="160" r="50" fill="#EEF2FF" stroke="#4F46E5" stroke-width="2.5" filter="url(#shadow)"/>
+    <text x="600" y="155" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#1E1B4B">Student 7</text>
+    <text x="600" y="170" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#4F46E5">:8007</text>
+    <text x="600" y="225" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#94A3B8">AgentMesh</text>
+
+    <!-- 315deg: 777, 233 -->
+    <circle cx="777" cy="233" r="50" fill="#EEF2FF" stroke="#4F46E5" stroke-width="2.5" filter="url(#shadow)"/>
+    <text x="777" y="228" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#1E1B4B">Student 8</text>
+    <text x="777" y="243" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#4F46E5">:8008</text>
+    <text x="777" y="298" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#94A3B8">AgentMesh</text>
+  </g>
+
+  <!-- Live A2A edges (highlighted in cyan) -->
+  <g>
+    <!-- Student 1 → Student 4: payments outage -->
+    <line x1="800" y1="410" x2="473" y2="587" stroke="#06B6D4" stroke-width="3" stroke-dasharray="6,3" opacity="0.7"/>
+    <rect x="585" y="478" width="180" height="22" rx="6" fill="#ECFEFF" stroke="#06B6D4" stroke-width="1.5"/>
+    <text x="675" y="494" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#083344">triage: payments outage</text>
+
+    <!-- Student 6 → Student 2: auth service degraded -->
+    <line x1="473" y1="233" x2="727" y2="587" stroke="#06B6D4" stroke-width="3" stroke-dasharray="6,3" opacity="0.7"/>
+    <rect x="475" y="380" width="200" height="22" rx="6" fill="#ECFEFF" stroke="#06B6D4" stroke-width="1.5"/>
+    <text x="575" y="396" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#083344">triage: auth service degraded</text>
+
+    <!-- Student 7 → Student 5: cache miss spike -->
+    <line x1="550" y1="160" x2="400" y2="410" stroke="#06B6D4" stroke-width="3" stroke-dasharray="6,3" opacity="0.7"/>
+    <rect x="368" y="282" width="170" height="22" rx="6" fill="#ECFEFF" stroke="#06B6D4" stroke-width="1.5"/>
+    <text x="453" y="298" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#083344">triage: cache miss spike</text>
+  </g>
+
+  <!-- Background dim edges (other potential connections) -->
+  <line x1="850" y1="410" x2="350" y2="410" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="2,4" opacity="0.5"/>
+  <line x1="600" y1="160" x2="600" y2="660" stroke="#CBD5E1" stroke-width="1" stroke-dasharray="2,4" opacity="0.5"/>
+
+  <!-- Floating MCP servers around perimeter -->
+  <g>
+    <rect x="40" y="350" width="120" height="40" rx="8" fill="#FFFBEB" stroke="#F59E0B" stroke-width="2" filter="url(#shadow)"/>
+    <text x="100" y="367" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#451A03">MCP: cohort_lookup</text>
+    <text x="100" y="382" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#92400E">published by Student 3</text>
+    <line x1="160" y1="370" x2="300" y2="410" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="3,3"/>
+    <line x1="160" y1="370" x2="373" y2="233" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="3,3"/>
+
+    <rect x="40" y="430" width="120" height="40" rx="8" fill="#FFFBEB" stroke="#F59E0B" stroke-width="2" filter="url(#shadow)"/>
+    <text x="100" y="447" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#451A03">MCP: incident_hist</text>
+    <text x="100" y="462" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#92400E">published by Student 5</text>
+    <line x1="160" y1="450" x2="300" y2="410" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="3,3"/>
+    <line x1="160" y1="450" x2="373" y2="587" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="3,3"/>
+
+    <rect x="1040" y="350" width="120" height="40" rx="8" fill="#FFFBEB" stroke="#F59E0B" stroke-width="2" filter="url(#shadow)"/>
+    <text x="1100" y="367" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#451A03">MCP: runbook_lib</text>
+    <text x="1100" y="382" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#92400E">published by Student 8</text>
+    <line x1="1040" y1="370" x2="900" y2="410" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="3,3"/>
+    <line x1="1040" y1="370" x2="827" y2="233" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="3,3"/>
+
+    <rect x="1040" y="430" width="120" height="40" rx="8" fill="#FFFBEB" stroke="#F59E0B" stroke-width="2" filter="url(#shadow)"/>
+    <text x="1100" y="447" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#451A03">MCP: ticket_search</text>
+    <text x="1100" y="462" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" fill="#92400E">published by Student 7</text>
+    <line x1="1040" y1="450" x2="900" y2="410" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="3,3"/>
+    <line x1="1040" y1="450" x2="827" y2="587" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="3,3"/>
+  </g>
+
+  <!-- caption -->
+  <rect x="60" y="710" width="1080" height="40" rx="8" fill="#FFFFFF" stroke="#CBD5E1" stroke-width="1"/>
+  <text x="600" y="734" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#0F172A">What we built in 22 minutes. What you will operate for the rest of the course.</text>
+
+  <text x="1100" y="745" text-anchor="end" font-family="system-ui, sans-serif" font-size="10" fill="#94A3B8">Applied GenAI &amp; Agentic AI Engineering Course · Week 11</text>
+</svg>

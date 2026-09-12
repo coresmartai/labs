@@ -1,0 +1,17 @@
+{
+  "note": "Tool-pick golden set. `why` is not scored and is the most valuable column in the file: it is how a person reading a failure six weeks from now can tell whether the model was wrong or the row was.",
+  "rows": [
+    {"request": "who runs the agent at http://localhost:8001?", "expected": "peer_card", "why": "asks about identity of an agent at a URL, no work requested"},
+    {"request": "what skills does that peer actually offer?", "expected": "peer_card", "why": "capability discovery, which is what the card is for"},
+    {"request": "can we even talk to the agent on 8001?", "expected": "peer_card", "why": "reachability and binding compatibility, still discovery"},
+    {"request": "payments-api is throwing 500s for about a third of requests", "expected": "delegate_triage", "why": "an incident description, no explicit instruction, still triage work"},
+    {"request": "please restart the payments service, it is wedged again", "expected": "delegate_triage", "why": "an action request; the peer decides whether it needs a human"},
+    {"request": "the checkout queue has been backing up since 09:40", "expected": "delegate_triage", "why": "an outage narrative with a timestamp"},
+    {"request": "where is the runbook for restarting payments-api?", "expected": "delegate_triage", "why": "a knowledge request the peer handles; tests that we do not over-narrow to actions"},
+    {"request": "approve task tk_8f21, I am u_772", "expected": "resume_task", "why": "names a task id and a decision"},
+    {"request": "reject that one, we are not restarting anything during the freeze", "expected": "resume_task", "why": "a decision on a pending task, phrased without an id"},
+    {"request": "go ahead with the restart you proposed", "expected": "resume_task", "why": "approval phrased as agreement; the hardest row in the set"},
+    {"request": "what is the capital of France?", "expected": "none", "why": "no tool should fire; a set without this optimises into a server that answers everything"},
+    {"request": "summarise the last three messages in this conversation", "expected": "none", "why": "the host can do this; reaching for a tool here is a false positive"}
+  ]
+}

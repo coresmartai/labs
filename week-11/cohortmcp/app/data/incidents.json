@@ -1,0 +1,5 @@
+[
+  {"id": "INC-101", "severity": "high", "summary": "payments-api timeout after deploy"},
+  {"id": "INC-102", "severity": "medium", "summary": "auth-service JWKS cache stale"},
+  {"id": "INC-103", "severity": "critical", "summary": "primary db replication lag"}
+]

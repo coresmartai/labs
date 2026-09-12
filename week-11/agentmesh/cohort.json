@@ -1,0 +1,40 @@
+{
+  "_comment": "Every URL this project needs, in one file. Which mode you run in is set by COHORT_MODE in .env (solo | online), not here - that is a per-machine choice, while this file is shared. Secrets stay in .env too; this file is safe to commit.",
+  "paths": {
+    "_comment": "Paths appended to a base URL. The same for you and every classmate, so they are declared once here instead of being spelled out in each script and doc.",
+    "agent_card": "/.well-known/agent-card.json",
+    "health": "/health",
+    "tasks": "/tasks",
+    "mcp": "/mcp/"
+  },
+  "solo": {
+    "_comment": "Everything on your laptop, no tunnel, no classmates needed. `peers` are the OPTIONAL extra copies of this service you can start on other ports to simulate a cohort of one.",
+    "my_base_url": "http://localhost:8000",
+    "cohort_index_url": null,
+    "peers": [
+      {
+        "student_id": "stu_001",
+        "student_name": "Alice (local dummy)",
+        "base_url": "http://localhost:8001"
+      },
+      {
+        "student_id": "stu_002",
+        "student_name": "Bob (local dummy)",
+        "base_url": "http://localhost:8002"
+      }
+    ]
+  },
+  "online": {
+    "_comment": "The live class session. Leave my_base_url blank: online mode falls back to AGENTMESH_BASE_URL from .env (your cloudflared URL), so you set your URL in one place only. Fill my_base_url here just to override that. cohort_index_url is the database REST endpoint: the site at boss.site_url serves the PAGES, but Firebase Hosting cannot proxy the database without Cloud Functions, so machine-readable roster reads go straight to the database.",
+    "my_base_url": "",
+    "cohort_index_url": "https://coresmart-agentmesh-default-rtdb.firebaseio.com/public/agents.json",
+    "peers": []
+  },
+  "boss": {
+    "_comment": "The cohort coordination site. Ask your instructor for these, or copy them off the signup page. None are secrets - a Firebase web api_key is public by design; the database rules are what protect the data. Leave blank to work without a coordination service.",
+    "project_id": "coresmart-agentmesh",
+    "api_key": "AIzaSyBhNcPb-39dx25YfXlfdzqx3BvtgoAqOmk",
+    "database_url": "https://coresmart-agentmesh-default-rtdb.firebaseio.com",
+    "site_url": "https://coresmart-agentmesh.web.app"
+  }
+}

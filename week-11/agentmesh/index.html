@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgentMesh - Applied GenAI & Agentic AI Engineering Course Week 11</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0d1117;
+      --surface:     #161b22;
+      --surface-2:   #21262d;
+      --surface-3:   #2d333b;
+      --border:      #30363d;
+      --text:        #e6edf3;
+      --text-muted:  #7d8590;
+      --blue:        #58a6ff;
+      --blue-dim:    #1f3a5f;
+      --green:       #3fb950;
+      --green-dim:   #1a3a28;
+      --red:         #f85149;
+      --red-dim:     #3d1a1a;
+      --orange:      #d29922;
+      --radius:      8px;
+      --mono:        'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; height: 52px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 15px; font-weight: 600; color: var(--text);
+    }
+    .header-title .logo {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #1a56db, #7e3af2);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+    }
+    .week-badge {
+      background: var(--blue-dim); color: var(--blue);
+      font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 20px;
+      border: 1px solid #1f4080;
+    }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+
+    button {
+      cursor: pointer; border: none; border-radius: var(--radius);
+      font-size: 13px; font-weight: 500;
+      transition: opacity 0.15s, transform 0.1s;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .btn-ghost {
+      background: transparent; color: var(--text-muted);
+      border: 1px solid var(--border); padding: 6px 12px;
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+
+    .btn-primary { background: #1a56db; color: #fff; padding: 8px 16px; }
+    .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+
+    .btn-secondary {
+      background: var(--surface-2); color: var(--text);
+      border: 1px solid var(--border); padding: 8px 16px;
+    }
+    .btn-secondary:hover:not(:disabled) { background: var(--surface-3); }
+
+    .btn-demo {
+      background: transparent; color: var(--blue);
+      border: 1px solid var(--blue-dim); padding: 5px 12px; font-size: 12px;
+    }
+    .btn-demo:hover:not(:disabled) { background: var(--blue-dim); }
+
+    #health-chip {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px;
+      font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text-muted);
+    }
+    #health-chip:hover { background: var(--surface-3); }
+    #health-chip.online  { color: var(--green); border-color: #1a4a2e; }
+    #health-chip.offline { color: var(--red);   border-color: #4a1a1a; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+    .online  .dot { background: var(--green); box-shadow: 0 0 6px #3fb95088; animation: pulse 2s infinite; }
+    .offline .dot { background: var(--red); }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    main {
+      display: grid; grid-template-columns: 380px 1fr;
+      flex: 1; overflow: hidden;
+    }
+
+    .left-panel {
+      display: flex; flex-direction: column;
+      border-right: 1px solid var(--border); overflow: hidden;
+    }
+
+    .panel-section { padding: 16px; border-bottom: 1px solid var(--border); }
+    .panel-section:last-child { border-bottom: none; }
+
+    label {
+      display: block; font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); margin-bottom: 8px;
+    }
+
+    textarea, input[type="email"], input[type="text"], select {
+      width: 100%; background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text); font-size: 13px; font-family: inherit;
+      outline: none; transition: border-color 0.15s;
+    }
+    textarea { resize: none; }
+    textarea:focus, input:focus, select:focus {
+      border-color: var(--blue); box-shadow: 0 0 0 3px #1a56db22;
+    }
+
+    #notes {
+      flex: 1; min-height: 0; height: 0;
+      padding: 10px 12px; line-height: 1.6;
+    }
+
+    input[type="email"], input[type="text"] { padding: 8px 12px; height: 38px; }
+    select { padding: 8px 12px; height: 38px; cursor: pointer; }
+    select option { background: var(--surface-2); }
+
+    .input-row {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 8px;
+    }
+
+    .action-btns { display: flex; flex-direction: column; gap: 8px; padding: 16px; }
+    .action-btns button { width: 100%; justify-content: center; }
+
+    .right-panel { display: flex; flex-direction: column; overflow: hidden; }
+
+    .pane { display: flex; flex-direction: column; overflow: hidden; }
+    .pane-output { flex: 1; border-bottom: 1px solid var(--border); }
+    .pane-logs   { height: 200px; flex-shrink: 0; }
+
+    .pane-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); flex-shrink: 0;
+    }
+
+    .pane-body {
+      flex: 1; overflow-y: auto; padding: 16px;
+      font-family: var(--mono); font-size: 13px; line-height: 1.6;
+    }
+    .pane-body::-webkit-scrollbar { width: 6px; }
+    .pane-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .placeholder-msg { color: var(--text-muted); font-family: inherit; font-size: 13px; font-style: italic; }
+
+    .j-k    { color: #79c0ff; }
+    .j-s    { color: #a5d6ff; }
+    .j-n    { color: #ffa657; }
+    .j-b    { color: #7ee787; }
+    .j-null { color: var(--text-muted); }
+
+    #output-body.streaming::after {
+      content: '▋'; animation: blink 0.8s step-end infinite; color: var(--blue);
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .log-entry { display: flex; gap: 10px; padding: 2px 0; font-size: 12px; line-height: 1.5; }
+    .log-ts    { color: var(--text-muted); flex-shrink: 0; }
+    .log-level { font-weight: 700; flex-shrink: 0; width: 50px; }
+    .log-msg   { color: var(--text); word-break: break-word; }
+    .log-info    .log-level { color: var(--blue); }
+    .log-success .log-level { color: var(--green); }
+    .log-warn    .log-level { color: var(--orange); }
+    .log-error   .log-level { color: var(--red); }
+
+    .spinner {
+      display: none; width: 14px; height: 14px;
+      border: 2px solid var(--border); border-top-color: var(--blue);
+      border-radius: 50%; animation: spin 0.6s linear infinite; flex-shrink: 0;
+    }
+    .spinner.active { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: var(--red-dim); border: 1px solid #6b2020;
+      border-radius: var(--radius); padding: 12px;
+      color: var(--red); font-family: var(--mono); font-size: 12px; white-space: pre-wrap;
+    }
+
+    :root { --orange-dim: #3a2d0f; }
+
+    /* Compact density so the whole panel fits without scrolling. Kept as a safety net. */
+    .left-panel { overflow-y: auto; }
+    .panel-section { padding: 11px 16px; }
+    label { margin-bottom: 5px; }
+
+    /* Fixed height, not flex:1 - a growing textarea collapses to nothing inside a
+       flex column, which is what pushed the fields over each other. */
+    #notes { flex: none; height: 64px; }
+
+    /* Protocol tabs - one segmented control switching the A2A and MCP surfaces. */
+    .tab-bar { display: flex; gap: 6px; }
+    .tab-btn {
+      flex: 1; justify-content: center; padding: 8px 6px;
+      background: var(--surface-2); color: var(--text-muted);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      font-size: 13px; font-weight: 600;
+    }
+    .tab-btn:hover:not(.active) { background: var(--surface-3); color: var(--text); }
+    .tab-btn.active { background: var(--blue-dim); color: var(--blue); border-color: var(--blue); }
+
+    .hint { font-size: 11px; color: var(--text-muted); margin-top: 5px; line-height: 1.45; }
+    .field-gap { height: 6px; }
+
+    /* Two fields on one row - e.g. severity + user id. */
+    .two-col { display: flex; gap: 10px; }
+    .two-col > div { flex: 1; min-width: 0; }
+
+    /* A2A task states rendered as pills - the value IS the wire string. */
+    .state-pill {
+      display: inline-block; padding: 2px 8px; border-radius: 20px;
+      font-size: 11px; font-weight: 600; font-family: var(--mono);
+      background: var(--surface-3); color: var(--text-muted);
+    }
+    .state-working        { background: var(--blue-dim);   color: var(--blue); }
+    .state-input-required { background: var(--orange-dim); color: var(--orange); }
+    .state-completed      { background: var(--green-dim);  color: var(--green); }
+    .state-failed, .state-rejected, .state-canceled { background: var(--red-dim); color: var(--red); }
+
+    .event-row {
+      display: flex; gap: 8px; align-items: baseline;
+      padding: 3px 0; font-size: 12px; font-family: var(--mono);
+      color: var(--text-muted); flex-wrap: wrap;
+    }
+    .event-row .evt-id { color: var(--text-muted); min-width: 26px; }
+
+    .out-block { margin-bottom: 16px; }
+    .out-block:last-child { margin-bottom: 0; }
+    .out-block h4 {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 8px;
+    }
+    .divider { border-top: 1px solid var(--border); margin: 12px 0; }
+
+    /* Human-in-the-loop gate - the one place this UI shows approve/reject. */
+    .btn-approve { background: var(--green); color: #0a1929; padding: 7px 16px; font-weight: 600; }
+    .btn-approve:hover:not(:disabled) { opacity: 0.9; }
+    .btn-reject  { background: var(--red); color: #fff; padding: 7px 16px; font-weight: 600; }
+    .btn-reject:hover:not(:disabled) { opacity: 0.9; }
+    .gate-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+    /* MCP surface listing */
+    .mcp-line { display: flex; gap: 10px; padding: 2px 0; }
+    .mcp-line .mcp-kind { color: var(--blue); min-width: 78px; }
+    .mcp-line .mcp-items { color: var(--text); }
+
+    /* Cohort roster table */
+    table.roster { width: 100%; border-collapse: collapse; font-size: 12px; }
+    table.roster th {
+      text-align: left; color: var(--text-muted); font-weight: 600; font-size: 11px;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 4px 8px; border-bottom: 1px solid var(--border);
+    }
+    table.roster td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    table.roster .url-cell { font-family: var(--mono); word-break: break-all; color: var(--blue); }
+    .muted-sm { color: var(--text-muted); font-size: 11px; }
+
+    /* Capabilities listing - A2A + MCP surface of the target */
+    .cap-group { margin-bottom: 14px; }
+    .cap-h {
+      font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--blue); margin-bottom: 6px;
+    }
+    .cap-line { display: flex; gap: 10px; padding: 3px 0; font-size: 12px; align-items: baseline; }
+    .cap-label { color: var(--text-muted); min-width: 104px; flex-shrink: 0; }
+    .cap-val { color: var(--text); word-break: break-word; }
+    /* Clickable capability - runs the skill / tool / resource / prompt on click. */
+    .cap-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .cap-chip {
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px;
+      color: var(--blue); font-family: var(--mono); font-size: 12px; padding: 3px 9px;
+    }
+    .cap-chip:hover:not(:disabled) { background: var(--blue-dim); border-color: var(--blue); }
+    .cap-chip::before { content: '▷ '; color: var(--text-muted); }
+
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-title">
+    <div class="logo">🤖</div>
+    Applied GenAI & Agentic AI Engineering Course
+    <span class="week-badge">Week 11</span>
+    <span class="header-sub">- AgentMesh (A2A + MCP)</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn-ghost" onclick="fetchOwnCard()" title="This service's own Agent Card">🪪 My Card</button>
+    <button class="btn-ghost" onclick="window.open(API + '/readme','_blank')">📖 README</button>
+    <div id="health-chip" onclick="checkHealth()" title="Click to re-check">
+      <span class="dot"></span>
+      <span id="health-text">Checking…</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- Left panel -->
+  <div class="left-panel">
+
+    <!-- target selector - point this UI at your own service or a peer's -->
+    <div class="panel-section">
+      <label>Target service (A2A + MCP)</label>
+      <input type="text" id="peer-base" placeholder="blank = this service" />
+      <div class="hint">A classmate's URL drives their agent; blank = your own.</div>
+      <div class="field-gap"></div>
+      <label>Bearer token</label>
+      <input type="text" id="peer-token" value="demo-token" />
+      <div class="field-gap"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-secondary" style="flex:1;justify-content:center" onclick="connectTo()">Connect</button>
+        <button class="btn-secondary" style="flex:1;justify-content:center" onclick="inspectCapabilities()" title="List the target's A2A skills + MCP tools/resources/prompts">🔎 Capabilities</button>
+      </div>
+    </div>
+
+    <!-- protocol tabs - the two surfaces this build speaks -->
+    <div class="panel-section">
+      <div class="tab-bar">
+        <button class="tab-btn active" id="tabbtn-a2a" onclick="switchTab('a2a')">A2A</button>
+        <button class="tab-btn" id="tabbtn-mcp" onclick="switchTab('mcp')">MCP</button>
+        <button class="tab-btn" id="tabbtn-cohort" onclick="switchTab('cohort')">Cohort</button>
+      </div>
+    </div>
+
+    <!-- CORE: Primary input - id="notes" stays; here it is the incident description -->
+    <div class="panel-section" id="tab-a2a">
+      <label>Scenario</label>
+      <select id="scenario" onchange="applyScenario()">
+        <option value="knowledge">Knowledge question (no approval)</option>
+        <option value="action" selected>Action request (approval gate)</option>
+        <option value="escalate">Critical incident (escalate)</option>
+      </select>
+      <div class="field-gap"></div>
+      <div class="input-row">
+        <label style="margin:0">Incident description</label>
+        <button class="btn-demo" onclick="fillDemo()">↺ Fill Demo</button>
+      </div>
+      <textarea id="notes" placeholder="Describe the production incident…">Please restart payments-api now</textarea>
+      <div class="field-gap"></div>
+      <div class="two-col">
+        <div>
+          <label>Severity</label>
+          <select id="severity">
+            <option value="low">low</option>
+            <option value="medium">medium</option>
+            <option value="high" selected>high</option>
+            <option value="critical">critical</option>
+          </select>
+        </div>
+        <div>
+          <label>User ID</label>
+          <input type="text" id="user_id" value="u_42" />
+        </div>
+      </div>
+    </div>
+
+    <!-- MCP tool call - populated after "Connect & List" -->
+    <div class="panel-section" id="tab-mcp" style="display:none">
+      <label>MCP tool</label>
+      <select id="mcp-tool"><option value="">(run "Connect &amp; List" first)</option></select>
+      <div class="field-gap"></div>
+      <label>Arguments (JSON)</label>
+      <input type="text" id="mcp-args" placeholder='{"student_id":"stu_002"}' />
+      <div class="hint">Co-hosted MCP at <code>/mcp/</code> - your tools, or a peer's when Connected.</div>
+    </div>
+
+    <!-- cohort roster - who is on the mesh, probed from the browser -->
+    <div class="panel-section" id="tab-cohort" style="display:none">
+      <label>Cohort roster</label>
+      <div class="hint" style="margin-top:0">Sweeps the class (online) or the local dummy
+        peers (solo), probing each <code>/health</code> from your browser. <strong>Use</strong>
+        points the Target above at that agent.</div>
+    </div>
+
+    <!-- CORE: Action buttons - one set per tab -->
+    <div class="action-btns" id="btns-a2a">
+      <button class="btn-primary" id="btn-submit" onclick="submitTask()">
+        <span id="spin-submit" class="spinner"></span>
+        🚀 &nbsp;Submit Task
+      </button>
+      <button class="btn-secondary" id="btn-card" onclick="fetchCard()">
+        <span id="spin-card" class="spinner"></span>
+        🪪 &nbsp;Fetch Agent Card
+      </button>
+      <button class="btn-ghost" onclick="dropStream()">✕ &nbsp;Drop stream (replay demo)</button>
+    </div>
+
+    <div class="action-btns" id="btns-mcp" style="display:none">
+      <button class="btn-primary" id="btn-mcp-list" onclick="mcpList()">
+        <span id="spin-mcp" class="spinner"></span>
+        🔌 &nbsp;Connect &amp; List
+      </button>
+      <button class="btn-secondary" id="btn-mcp-call" onclick="mcpCall()">
+        <span id="spin-call" class="spinner"></span>
+        🔧 &nbsp;Call Tool
+      </button>
+    </div>
+
+    <div class="action-btns" id="btns-cohort" style="display:none">
+      <button class="btn-primary" id="btn-sweep" onclick="sweepCohort()">
+        <span id="spin-sweep" class="spinner"></span>
+        📡 &nbsp;Sweep Cohort
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Right panel (CORE structure) -->
+  <div class="right-panel">
+
+    <div class="pane pane-output">
+      <div class="pane-header">
+        Output
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="output-tag" style="font-size:11px;color:var(--text-muted)"></span>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px;display:none" id="btn-format" onclick="toggleFormat()">{ } Format</button>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearOutput()">✕ Clear</button>
+        </div>
+      </div>
+      <div class="pane-body" id="output-body">
+        <span class="placeholder-msg">Submit a task, list the MCP surface, or fetch the Agent Card…</span>
+      </div>
+    </div>
+
+    <div class="pane pane-logs">
+      <div class="pane-header">
+        Logs
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="log-count" style="font-size:11px;color:var(--text-muted)"></span>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="downloadLogs()" title="Download the activity log as a .log file">⤓ Save .log</button>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearLogs()">✕ Clear</button>
+        </div>
+      </div>
+      <div class="pane-body" id="logs-body">
+        <span class="placeholder-msg">Request logs will appear here…</span>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  const API = window.location.origin.startsWith('http')
+    ? window.location.origin : 'http://localhost:8000';
+  
+  let _rawOutputText = '';
+  let _isFormatted   = false;
+
+  function _fmtDetail(detail, fallback) {
+    if (!detail) return fallback || 'Unknown error';
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail))
+      return detail.map(d => d.msg || JSON.stringify(d)).join(' | ');
+    return JSON.stringify(detail);
+  }
+
+  function _showFormatBtn(show) {
+    document.getElementById('btn-format').style.display = show ? '' : 'none';
+    _isFormatted = false;
+    document.getElementById('btn-format').textContent = '{ } Format';
+  }
+
+  function toggleFormat() {
+    const body = document.getElementById('output-body');
+    const btn  = document.getElementById('btn-format');
+    if (!_isFormatted) {
+      let src = _rawOutputText.trim();
+      if (src.startsWith('```')) {
+        const inner = src.split('```')[1] || '';
+        src = inner.startsWith('json') ? inner.slice(4).trim() : inner.trim();
+      }
+      try {
+        body.innerHTML = `<pre>${highlightJSON(JSON.parse(src))}</pre>`;
+        _isFormatted = true; btn.textContent = '≡ Raw';
+        addLog('info', 'Output formatted as JSON.');
+      } catch { addLog('warn', 'Could not parse output as JSON.'); }
+    } else {
+      body.textContent = _rawOutputText;
+      _isFormatted = false; btn.textContent = '{ } Format';
+    }
+  }
+
+  function clearOutput() {
+    document.getElementById('output-body').innerHTML =
+      '<span class="placeholder-msg">Submit a task, list the MCP surface, or fetch the Agent Card…</span>';
+    document.getElementById('output-tag').textContent = '';
+    _rawOutputText = ''; _showFormatBtn(false);
+  }
+
+  function clearLogs() {
+    document.getElementById('logs-body').innerHTML =
+      '<span class="placeholder-msg">Request logs will appear here…</span>';
+  }
+
+  function addLog(level, msg) {
+    const body = document.getElementById('logs-body');
+    const ph   = body.querySelector('.placeholder-msg');
+    if (ph) ph.remove();
+    const now = new Date().toLocaleTimeString('en-GB', {hour12: false});
+    const div = document.createElement('div');
+    div.className = `log-entry log-${level}`;
+    div.innerHTML =
+      `<span class="log-ts">${now}</span>` +
+      `<span class="log-level">${level.toUpperCase()}</span>` +
+      `<span class="log-msg">${escHtml(msg)}</span>`;
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function highlightJSON(obj) {
+    const str = JSON.stringify(obj, null, 2);
+    return escHtml(str).replace(
+      /(&quot;(?:\\u[0-9a-fA-F]{4}|\\[^u]|[^\\&])*&quot;(?:\s*:)?|\b(?:true|false)\b|\bnull\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      match => {
+        let c = 'n';
+        if (match.startsWith('&quot;'))
+          c = match.endsWith(':') ? 'k' : 's';
+        else if (match === 'true' || match === 'false') c = 'b';
+        else if (match === 'null') c = 'null';
+        return `<span class="j-${c}">${match}</span>`;
+      }
+    );
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function setLoading(active) {
+    document.querySelectorAll('.action-btns button').forEach(b => b.disabled = active);
+    document.querySelectorAll('.spinner').forEach(s => s.classList.toggle('active', active));
+  }
+
+  // BASE is the target service, reassignable via Connect: your own origin (solo) or a
+  // classmate's URL (online). Every A2A and MCP call below reads it, so one Connect is
+  // the whole "delegate to a peer" switch. Wildcard CORS server-side makes it work.
+  let BASE   = API;
+  let TOKEN  = 'demo-token';   // a real deploy issues a JWT; the UI bakes a fixture for the demo
+  let SERVER_AUTH = null;      // the target's AUTH_MODE from /health - drives the auth hints
+
+  // Task / stream state
+  let currentTaskId = null;
+  let currentStream = null;
+  let lastId = 0;              // the SSE cursor - every event carries id:; keep the last
+
+  // MCP session state
+  let MCP_SESSION = null;
+  let MCP_TOOLS = [];
+
+  const DEMO_NOTES = 'Please restart payments-api now';
+
+  // ── Activity log helpers ───────────────────────────────────────────────────
+  // The Logs pane is the timeline: every network hop and feature use lands there,
+  // timestamped by addLog(), with latency and (for peers) which host it crossed to.
+  const API_HOST = (() => { try { return new URL(API).host; } catch { return 'local'; } })();
+  const _ms = (t0) => Math.round(performance.now() - t0);       // elapsed since t0
+  const hostOf = (u) => { try { return new URL(u, API).host; } catch { return String(u); } };
+  const tgtHost = () => hostOf(BASE);
+  // A short "@ host" tag only when the call leaves this origin - so a network hop to a
+  // classmate is visible, but same-origin calls stay uncluttered.
+  const at = () => (BASE === API ? '' : ` @ ${tgtHost()}`);
+  // One line per completed request: method, path, status, elapsed, and the peer if any.
+  function logNet(method, path, status, t0, hostTag) {
+    const level = status === 'ERR' ? 'error' : (Number(status) >= 400 ? 'warn' : 'success');
+    addLog(level, `${method} ${path}${hostTag ?? at()} → ${status} · ${_ms(t0)}ms`);
+  }
+
+  // Serialise the Logs pane to plain text, with a header of session context.
+  function _logText() {
+    const rows = [...document.querySelectorAll('#logs-body .log-entry')];
+    const lines = rows.map((e) => {
+      const ts  = e.querySelector('.log-ts')?.textContent || '';
+      const lv  = (e.querySelector('.log-level')?.textContent || '').padEnd(7);
+      const msg = e.querySelector('.log-msg')?.textContent || '';
+      return `${ts}  ${lv} ${msg}`;
+    });
+    const head = [
+      '# AgentMesh UI activity log',
+      `# served from : ${API_HOST}`,
+      `# last target : ${BASE}${BASE === API ? ' (this service)' : ' (peer)'}  ·  auth: ${SERVER_AUTH || '?'}`,
+      `# entries     : ${rows.length}`,
+      '#',
+    ];
+    return { count: rows.length, text: head.concat(lines).join('\n') + '\n' };
+  }
+
+  // Download the activity log as a .log file. All client-side: a Blob the browser saves,
+  // nothing leaves the machine.
+  function downloadLogs() {
+    const { count, text } = _logText();
+    if (!count) { addLog('warn', 'No logs to save yet.'); return; }
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);   // 2026-08-13T12-30-00
+    const name = `agentmesh-${API_HOST.replace(/[^a-z0-9]/gi, '_')}-${stamp}.log`;
+    const url = URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    addLog('success', `⤓ saved ${count} log entries to ${name}`);
+  }
+
+  // Live entry count in the pane header - via an observer, so CORE addLog() stays untouched.
+  function _watchLogCount() {
+    const body = document.getElementById('logs-body');
+    const label = document.getElementById('log-count');
+    const update = () => {
+      const n = body.querySelectorAll('.log-entry').length;
+      label.textContent = n ? `${n} entries` : '';
+    };
+    new MutationObserver(update).observe(body, { childList: true });
+    update();
+  }
+
+  // A2A v1.0 task states. THE VALUE IS THE STRING ON THE WIRE - no lowercase form.
+  const TERMINAL_STATES = [
+    'TASK_STATE_COMPLETED', 'TASK_STATE_FAILED', 'TASK_STATE_CANCELED', 'TASK_STATE_REJECTED',
+  ];
+  const DRIVEN_STATES = ['TASK_STATE_SUBMITTED', 'TASK_STATE_WORKING', 'TASK_STATE_INPUT_REQUIRED', ...TERMINAL_STATES];
+  const pillClass = (state) =>
+    'state-' + state.replace('TASK_STATE_', '').toLowerCase().replaceAll('_', '-');
+
+  // Scenario presets - keep aligned with app/triage_core.py classification.
+  const SCENARIOS = {
+    knowledge: { description: 'Where is the runbook for restarting payments-api?', severity: 'low' },
+    action:    { description: 'Please restart payments-api now',                    severity: 'high' },
+    escalate:  { description: 'Production is completely down, all services failing', severity: 'critical' },
+  };
+  function applyScenario() {
+    const s = SCENARIOS[document.getElementById('scenario').value];
+    document.getElementById('notes').value = s.description;
+    document.getElementById('severity').value = s.severity;
+  }
+
+  function fillDemo() {
+    document.getElementById('scenario').value = 'action';
+    applyScenario();
+    addLog('info', 'Demo incident loaded (action - hits the approval gate).');
+  }
+
+  // Each surface gets its own tab - A2A task inputs, the MCP tool picker, or the cohort
+  // roster - plus its own buttons. Only the active surface's fields and actions are on
+  // screen, so nothing competes for vertical space in the left panel.
+  let _booted = false;
+  function switchTab(tab) {
+    ['a2a', 'mcp', 'cohort'].forEach((t) => {
+      const on = t === tab;
+      const content = document.getElementById('tab-' + t);
+      const btns    = document.getElementById('btns-' + t);
+      const btn     = document.getElementById('tabbtn-' + t);
+      if (content) content.style.display = on ? '' : 'none';
+      if (btns)    btns.style.display    = on ? '' : 'none';
+      if (btn)     btn.classList.toggle('active', on);
+    });
+    if (_booted) addLog('info', `▸ switched to ${tab.toUpperCase()} tab`);   // feature usage
+    // Sweeping is a network round trip, so only when you actually open the tab.
+    if (tab === 'cohort') sweepCohort();
+  }
+
+  // Override: health reflects the TARGET (self or peer) and shows its
+  // AUTH_MODE, which is what the token you send has to match.
+  async function checkHealth() {
+    const chip = document.getElementById('health-chip');
+    const txt  = document.getElementById('health-text');
+    chip.className = ''; txt.textContent = 'Checking…';
+    const t0 = performance.now();
+    try {
+      const r    = await fetch(`${BASE}/health`);
+      const data = await r.json();
+      SERVER_AUTH = data.auth_mode || null;
+      chip.className  = 'online';
+      txt.textContent = `Online · ${data.model} · auth: ${data.auth_mode || '?'}`;
+      logNet('GET', '/health', r.status, t0);
+      addLog('info', `↳ model ${data.model} · auth_mode ${data.auth_mode}`);
+    } catch (e) {
+      chip.className  = 'offline';
+      txt.textContent = 'Offline';
+      addLog('error', `GET /health${at()} → ERR · ${_ms(t0)}ms · is ${tgtHost()} up? (${e.message})`);
+    }
+  }
+
+  // Re-point the whole UI at another AgentMesh instance.
+  function connectTo() {
+    const entered = document.getElementById('peer-base').value.trim().replace(/\/+$/, '');
+    const token   = document.getElementById('peer-token').value.trim();
+    if (entered && !/^https?:\/\//i.test(entered)) {
+      addLog('warn', 'Target must start with http:// or https://');
+      return;
+    }
+    BASE  = entered || API;
+    TOKEN = token || 'demo-token';
+
+    // The MCP session belongs to whichever service we were pointed at - drop it so the
+    // next MCP action re-handshakes against the new target instead of replaying a stale id.
+    MCP_SESSION = null;
+    MCP_TOOLS = [];
+    document.getElementById('mcp-tool').innerHTML = '<option value="">(run "Connect & list" first)</option>';
+
+    resetStream();
+    addLog(BASE === API ? 'info' : 'success',
+      BASE === API ? '🔗 target: this service (solo, localhost)'
+                   : `🔗 connecting to peer ${tgtHost()} over the network (online)`);
+    checkHealth();
+  }
+
+  // ── A2A: submit → stream → gate → resubscribe ──────────────────────────────
+
+  // The A2A tab's Submit button - reads the form, runs the triage_incident skill.
+  function submitTask() {
+    return submitSkill('triage_incident', {
+      description: document.getElementById('notes').value,
+      severity:    document.getElementById('severity').value,
+      user_id:     document.getElementById('user_id').value,
+    });
+  }
+
+  // Run ANY A2A skill and drive its stream - shared by the Submit button and the
+  // clickable skills in the Capabilities view.
+  async function submitSkill(skill, input) {
+    resetStream();
+    clearOutput(); setLoading(true);
+    document.getElementById('output-tag').textContent = '/tasks';
+    addLog('info', `POST /tasks${at()} · ${skill}${input.severity ? ' · severity=' + input.severity : ''}`);
+    const t0 = performance.now();
+
+    try {
+      const r = await fetch(`${BASE}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN },
+        body: JSON.stringify({ skill, input }),
+      });
+      const data = await r.json();
+      logNet('POST', '/tasks', r.status, t0);
+      if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+
+      currentTaskId = data.task_id;
+      renderTaskShell(data.task_id);
+      setState(data.state);
+      addLog('info', `↳ ${data.task_id} · A2A-Version ${r.headers.get('A2A-Version') || '(absent)'}`);
+
+      // Stream from BASE, not data.stream_url: a peer who left AGENTMESH_BASE_URL at its
+      // default advertises a localhost stream we could never reach.
+      if (data.stream_url && !data.stream_url.startsWith(BASE)) {
+        addLog('warn', `peer advertised stream_url=${data.stream_url} - not on ${BASE}; streaming from the dialled base`);
+      }
+      addLog('info', `SSE open /tasks/${data.task_id}/stream${at()}`);
+      startStream(data.task_id);
+    } catch (e) {
+      document.getElementById('output-body').innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', 'POST /tasks failed: ' + e.message + authHint(e.message));
+    } finally { setLoading(false); }
+  }
+
+  function renderTaskShell(taskId) {
+    document.getElementById('output-body').innerHTML =
+      `<div class="out-block">
+         <h4>Task <span style="color:var(--text)">${escHtml(taskId)}</span></h4>
+         <div id="t-state"></div>
+         <div id="t-events" style="margin-top:10px"></div>
+         <div id="t-gate" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px">
+           <span class="state-pill state-input-required">TASK_STATE_INPUT_REQUIRED</span>
+           <pre id="t-proposal" style="margin-top:8px"></pre>
+           <div class="gate-actions">
+             <button class="btn-approve" onclick="sendApproval(true)">Approve</button>
+             <button class="btn-reject"  onclick="sendApproval(false)">Reject</button>
+           </div>
+         </div>
+         <div id="t-result" style="display:none;margin-top:12px;border-top:1px solid var(--border);padding-top:12px"></div>
+       </div>`;
+  }
+
+  function setState(state, payload) {
+    const badge = document.getElementById('t-state');
+    if (badge) badge.innerHTML = `<span class="state-pill ${pillClass(state)}">${state}</span>`;
+    if (state === 'TASK_STATE_INPUT_REQUIRED' && payload?.proposal) {
+      const gate = document.getElementById('t-gate');
+      if (gate) { gate.style.display = 'block';
+        document.getElementById('t-proposal').textContent = JSON.stringify(payload.proposal, null, 2); }
+    }
+    if ((state === 'TASK_STATE_COMPLETED' || state === 'TASK_STATE_REJECTED' || state === 'TASK_STATE_FAILED') && payload) {
+      const g = document.getElementById('t-gate'); if (g) g.style.display = 'none';
+      const res = document.getElementById('t-result');
+      if (res) { res.style.display = 'block';
+        res.innerHTML = `<h4>Result</h4><pre>${highlightJSON(payload)}</pre>`; }
+      _rawOutputText = JSON.stringify(payload, null, 2); _showFormatBtn(true);
+    }
+  }
+
+  function pushEvent(event) {
+    const events = document.getElementById('t-events');
+    if (!events) return;
+    const note = event.payload?.replay_gap
+      ? 'REPLAY GAP - oldest available #' + event.payload.oldest_available_event_id
+      : (event.payload?.message || '');
+    const row = document.createElement('div');
+    row.className = 'event-row';
+    row.innerHTML =
+      `<span class="evt-id">#${event.event_id}</span>` +
+      `<span class="state-pill ${pillClass(event.state)}">${event.state}</span>` +
+      `<span>${escHtml(note)}</span>`;
+    events.appendChild(row);
+  }
+
+  function startStream(taskId, fromEventId) {
+    // EventSource has no header support; the same TOKEN goes in as a query parameter,
+    // which the server's auth dependency accepts as a fallback. last_event_id is the
+    // replay cursor - the query-param twin of the Last-Event-ID header.
+    let url = `${BASE}/tasks/${taskId}/stream?token=${encodeURIComponent(TOKEN)}`;
+    if (fromEventId) url += `&last_event_id=${fromEventId}`;
+    currentStream = new EventSource(url);
+
+    const onEvent = (ev) => {
+      const event = JSON.parse(ev.data);
+      lastId = event.event_id;
+      pushEvent(event);
+      if (!event.payload?.replay_gap) setState(event.state, event.payload);
+      // Every state transition on the timeline, with the note the server attached.
+      const note = event.payload?.message || (event.payload?.replay_gap ? 'replay gap' : '');
+      addLog('info', `SSE #${event.event_id} ${event.state}${note ? ' · ' + note : ''}`);
+      // `final` marks the last event of an INTERACTION, not necessarily the task. A2A
+      // ends the stream at an interrupted state too: the task is parked waiting for us,
+      // so there is nothing left to push. Close it - sendApproval() reopens from this
+      // cursor once we answer. (Closing also stops EventSource auto-reconnecting.)
+      if (event.final || TERMINAL_STATES.includes(event.state)) {
+        currentStream.close(); currentStream = null;
+        addLog(TERMINAL_STATES.includes(event.state) ? 'success' : 'info',
+          TERMINAL_STATES.includes(event.state)
+            ? `✓ terminal ${event.state}` : `SSE closed at ${event.state} (your move)`);
+      }
+    };
+
+    // The server emits NAMED SSE events (event: TASK_STATE_*); plain onmessage never
+    // sees them - one listener per driven state, onmessage as fallback.
+    DRIVEN_STATES.forEach((s) => currentStream.addEventListener(s, onEvent));
+    currentStream.onmessage = onEvent;
+    currentStream.onerror = () => addLog('warn', 'stream connection error (it may have closed normally at a gate)');
+  }
+
+  async function sendApproval(approved) {
+    if (!currentTaskId) return;
+    const t0 = performance.now();
+    addLog('info', `POST /tasks/${currentTaskId}/input${at()} · ${approved ? 'approve' : 'reject'}`);
+    try {
+      const r = await fetch(`${BASE}/tasks/${currentTaskId}/input`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN },
+        body: JSON.stringify({ approved, note: 'via UI' }),
+      });
+      if (!r.ok) { const d = await r.json().catch(() => ({}));
+        logNet('POST', `/tasks/${currentTaskId}/input`, r.status, t0);
+        addLog('error', 'gate reply rejected: ' + _fmtDetail(d.detail, r.statusText)); return; }
+      logNet('POST', `/tasks/${currentTaskId}/input`, r.status, t0);
+      addLog(approved ? 'success' : 'warn', `↳ gate ${approved ? 'approved' : 'rejected'}`);
+      const gate = document.getElementById('t-gate'); if (gate) gate.style.display = 'none';
+      // Resubscribe for the rest of the task. The cursor means we resume, not replay.
+      if (!currentStream) { addLog('info', `SSE resubscribe from #${lastId}${at()}`); startStream(currentTaskId, lastId); }
+    } catch (e) { addLog('error', 'gate reply failed: ' + e.message); }
+  }
+
+  function dropStream() {
+    // The replay demo: kill the connection mid-task, then reconnect with the cursor -
+    // every event you missed comes back, in order, exactly once.
+    if (!currentTaskId) { addLog('warn', 'no task to drop - submit one first'); return; }
+    if (currentStream) { currentStream.close(); currentStream = null; }
+    addLog('warn', `stream dropped at #${lastId} - reconnecting with Last-Event-ID…`);
+    setTimeout(() => startStream(currentTaskId, lastId), 1200);
+  }
+
+  function resetStream() {
+    if (currentStream) { currentStream.close(); currentStream = null; }
+    currentTaskId = null; lastId = 0;
+  }
+
+  // ── Agent Card ─────────────────────────────────────────────────────────────
+
+  async function fetchCard() {
+    clearOutput(); setLoading(true);
+    document.getElementById('output-tag').textContent = '/.well-known/agent-card.json';
+    addLog('info', `GET /.well-known/agent-card.json${at()}`);
+    const t0 = performance.now();
+    try {
+      const r = await fetch(`${BASE}/.well-known/agent-card.json`);
+      const d = await r.json();
+      logNet('GET', '/.well-known/agent-card.json', r.status, t0);
+      if (!r.ok) throw new Error(_fmtDetail(d.detail, r.statusText));
+
+      // The remote-cohort trap: a card fetched from a public URL that still advertises
+      // localhost means the peer never set AGENTMESH_BASE_URL, so every URL they hand
+      // out points back at THIS machine.
+      const advertised = [d.url, d.endpoints && d.endpoints.base].filter(Boolean);
+      const local = advertised.filter((u) => /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:|\/|$)/i.test(u));
+      let warn = '';
+      if (BASE !== API && local.length) {
+        warn = `<div class="error-box" style="margin-bottom:12px">WARNING: this card advertises ${escHtml(local.join(', '))}\nbut you dialled ${escHtml(BASE)} - the peer has not set AGENTMESH_BASE_URL to their public URL. See SESSION.md.</div>`;
+        addLog('warn', 'card advertises localhost while dialled remotely - peer AGENTMESH_BASE_URL not set');
+      }
+      document.getElementById('output-body').innerHTML = warn + `<pre>${highlightJSON(d)}</pre>`;
+      _rawOutputText = JSON.stringify(d, null, 2); _showFormatBtn(true);
+      addLog('info', `↳ ${d.name} v${d.version} · skills ${(d.skills || []).map((s) => s.id).join(', ')}`);
+    } catch (e) {
+      document.getElementById('output-body').innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally { setLoading(false); }
+  }
+
+  // This service's OWN card, regardless of the current target - the header button.
+  async function fetchOwnCard() {
+    clearOutput(); setLoading(true);
+    document.getElementById('output-tag').textContent = 'self /.well-known/agent-card.json';
+    addLog('info', `🪪 GET /.well-known/agent-card.json (self @ ${API_HOST})`);
+    const t0 = performance.now();
+    try {
+      const r = await fetch(`${API}/.well-known/agent-card.json`);
+      const d = await r.json();
+      logNet('GET', '/.well-known/agent-card.json (self)', r.status, t0, '');
+      if (!r.ok) throw new Error(_fmtDetail(d.detail, r.statusText));
+      document.getElementById('output-body').innerHTML =
+        `<div class="out-block"><h4>My Agent Card · ${escHtml(API_HOST)}</h4><pre>${highlightJSON(d)}</pre></div>`;
+      _rawOutputText = JSON.stringify(d, null, 2); _showFormatBtn(true);
+      addLog('info', `↳ ${d.name} v${d.version} · skills ${(d.skills || []).map((s) => s.id).join(', ')}`);
+    } catch (e) {
+      document.getElementById('output-body').innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', 'self card: ' + e.message);
+    } finally { setLoading(false); }
+  }
+
+  // ── Capabilities - the whole feature surface of the target, both protocols ──
+  // A2A comes from the (unauthenticated) Agent Card; MCP from the initialize handshake
+  // plus tools/resources/prompts lists. Rendered side by side so "what can this agent
+  // do?" is one click, whether the target is your own service or a classmate's.
+
+  const _capLine = (label, val) =>
+    `<div class="cap-line"><span class="cap-label">${escHtml(label)}</span><span class="cap-val">${escHtml(val)}</span></div>`;
+  const _capRow = (label, html) =>
+    `<div class="cap-line"><span class="cap-label">${escHtml(label)}</span><span class="cap-val">${html}</span></div>`;
+  const _chip = (label, onclick, title) =>
+    `<button class="cap-chip" onclick="${onclick}" title="${escHtml(title || '')}">${escHtml(label)}</button>`;
+  const _chipRow = (items, mk) =>
+    items.length ? `<div class="cap-chips">${items.map(mk).join('')}</div>` : '(none)';
+
+  function renderA2ACaps(d) {
+    CAPS.skills = d.skills || [];
+    const caps = d.capabilities || {};
+    const capStr = Object.entries(caps).map(([k, v]) => `${k}=${v}`).join(' · ') || '(none)';
+    const ep = d.endpoints || {};
+    const epStr = ['tasks', 'stream', 'input', 'status', 'mcp']
+      .filter((k) => ep[k]).map((k) => `${k} ${ep[k]}`).join(' · ');
+    // supportedInterfaces[] is the v1.0 reachability field, and it is ORDERED:
+    // entry zero is this agent's preferred interface. Shown before `endpoints`
+    // because `endpoints` is this build's own scaffolding, not a spec field.
+    const ifaces = d.supportedInterfaces || [];
+    const ifaceStr = ifaces
+      .map((i, n) => `${n === 0 ? 'preferred ' : ''}${i.protocolBinding} v${i.protocolVersion} ${i.url}`)
+      .join(' · ');
+    return `<div class="cap-group"><div class="cap-h">A2A · from Agent Card · click a skill to run it</div>` +
+      _capLine('agent', `${d.name} v${d.version} (protocol ${d.protocolVersion})`) +
+      _capLine('provider', (d.provider || {}).organization || '-') +
+      _capRow('skills', _chipRow(CAPS.skills, (s, i) => _chip(s.id, `useSkill(${i})`, s.description || ''))) +
+      _capLine('capabilities', capStr) +
+      _capLine('interfaces', ifaceStr || '(none)') +
+      _capLine('endpoints', epStr || '(none)') +
+      `</div>`;
+  }
+
+  function renderMCPCaps(init, tools, resources, templates, prompts) {
+    CAPS.tools = tools; CAPS.resources = resources; CAPS.templates = templates; CAPS.prompts = prompts;
+    const caps = (init && init.capabilities) || {};
+    const flags = [];
+    for (const [prim, obj] of Object.entries(caps)) {
+      if (obj && typeof obj === 'object')
+        for (const [k, v] of Object.entries(obj)) flags.push(`${prim}.${k}=${v}`);
+    }
+    const resChips =
+      _chipRow(resources, (r, i) => _chip(r.name || r.uri, `useResource(${i})`, r.uri)) +
+      (templates.length ? `<div class="cap-chips" style="margin-top:6px">${templates.map((t, i) =>
+        _chip((t.name || t.uriTemplate) + ' {…}', `useTemplate(${i})`, t.uriTemplate)).join('')}</div>` : '');
+    return `<div class="cap-group"><div class="cap-h">MCP · from initialize + list · click to invoke</div>` +
+      _capLine('server', `${(init.serverInfo || {}).name || '?'} · protocol ${init.protocolVersion || '?'}`) +
+      _capRow('tools', _chipRow(tools, (t, i) => _chip(t.name, `useTool(${i})`, t.description || ''))) +
+      _capRow('resources', resChips) +
+      _capRow('prompts', _chipRow(prompts, (p, i) => _chip(p.name, `usePrompt(${i})`, p.description || ''))) +
+      _capLine('server caps', flags.join(' · ') || '(none)') +
+      `</div>`;
+  }
+
+  async function inspectCapabilities() {
+    clearOutput(); setLoading(true);
+    CAPS = { skills: [], tools: [], resources: [], templates: [], prompts: [] };
+    const target = BASE === API ? 'this service (solo)' : tgtHost();
+    document.getElementById('output-tag').textContent = 'capabilities';
+    addLog('info', `🔎 inspect capabilities of ${target}`);
+
+    // A2A: the Agent Card is public, so this half always works.
+    let a2aHtml;
+    const t0 = performance.now();
+    try {
+      const r = await fetch(`${BASE}/.well-known/agent-card.json`);
+      const d = await r.json();
+      logNet('GET', '/.well-known/agent-card.json', r.status, t0);
+      if (!r.ok) throw new Error(_fmtDetail(d.detail, r.statusText));
+      a2aHtml = renderA2ACaps(d);
+      addLog('success', `A2A caps → ${(d.skills || []).length} skill(s)`);
+    } catch (e) {
+      a2aHtml = `<div class="error-box">A2A card unreachable: ${escHtml(e.message)}</div>`;
+      addLog('error', 'A2A caps: ' + e.message);
+    }
+
+    // MCP: needs the bearer + mcp:invoke scope. Show its own error (with the auth hint)
+    // rather than failing the whole view if the token is wrong.
+    let mcpHtml;
+    const t1 = performance.now();
+    try {
+      const init = await mcpConnect();
+      const tools     = await mcpRpc('tools/list', {});
+      const resources = await mcpRpc('resources/list', {});
+      let templates = { resourceTemplates: [] };
+      try { templates = await mcpRpc('resources/templates/list', {}); } catch { /* server may not template */ }
+      const prompts   = await mcpRpc('prompts/list', {});
+      MCP_TOOLS = tools.tools;
+      mcpHtml = renderMCPCaps(init, MCP_TOOLS, resources.resources, templates.resourceTemplates || [], prompts.prompts);
+      // Prime the MCP tab's picker as a side effect, so its Call Tool is ready too.
+      const sel = document.getElementById('mcp-tool');
+      sel.innerHTML = MCP_TOOLS.map((t) => `<option value="${escHtml(t.name)}">${escHtml(t.name)}</option>`).join('');
+      sel.value = MCP_TOOLS.some((t) => t.name === 'cohort_lookup') ? 'cohort_lookup' : (MCP_TOOLS[0]?.name || '');
+      addLog('success', `MCP caps → ${MCP_TOOLS.length} tools · ${_ms(t1)}ms`);
+    } catch (e) {
+      mcpHtml = `<div class="error-box">MCP surface: ${escHtml(e.message)}\n\n${escHtml(authHintText(e.message))}</div>`;
+      addLog('error', 'MCP caps: ' + e.message);
+    }
+
+    document.getElementById('output-body').innerHTML =
+      `<div class="out-block"><h4>Capabilities · ${escHtml(target)} · click any item to run it</h4>` +
+      `${a2aHtml}<div class="divider"></div>${mcpHtml}</div>`;
+    setLoading(false);
+  }
+
+  // ── Cohort roster - who is on the mesh ─────────────────────────────────────
+  // Bootstrap from our own /cohort (it knows the index URL / peers from cohort.json),
+  // then read the roster and probe each agent's /health straight from the browser -
+  // the same sweep scripts/cohort_roster.py does, minus the terminal.
+
+  // Mirror of scripts/cohort_roster.py normalise_index: accept a static index.json
+  // ({students:[...]}), a bare array, or Firebase RTDB ({callsign: {...}}).
+  function normalizeIndex(data) {
+    if (data == null) return [];
+    if (Array.isArray(data)) return data.filter((x) => x && typeof x === 'object');
+    if (typeof data !== 'object') return [];
+    if (Array.isArray(data.students)) return data.students.filter((x) => x && typeof x === 'object');
+    const rows = [];
+    for (const [key, value] of Object.entries(data)) {
+      if (key.startsWith('_') || !value || typeof value !== 'object') continue;
+      const row = { ...value };
+      row.student_id   = row.student_id   || row.tag || key;   // RTDB keys by callsign
+      row.student_name = row.student_name || row.tag || key;
+      rows.push(row);
+    }
+    return rows;
+  }
+
+  async function sweepCohort() {
+    clearOutput(); setLoading(true);
+    document.getElementById('output-tag').textContent = '/cohort';
+    addLog('info', `📡 sweep cohort - GET /cohort`);
+    const t0 = performance.now();
+    try {
+      const cr = await fetch(`${API}/cohort`);
+      const cfg = await cr.json();
+      logNet('GET', '/cohort', cr.status, t0);
+      let agents;
+      if (cfg.cohort_index_url) {
+        const ti = performance.now();
+        const ir = await fetch(cfg.cohort_index_url, { cache: 'no-store' });
+        agents = normalizeIndex(await ir.json());
+        addLog('success', `GET roster index → ${ir.status} · ${_ms(ti)}ms @ ${hostOf(cfg.cohort_index_url)} (online)`);
+      } else {
+        addLog('info', `solo mode: ${cfg.peers.length} local dummy peer(s)`);
+        agents = cfg.peers;
+      }
+
+      if (!agents.length) {
+        document.getElementById('output-body').innerHTML =
+          `<div class="out-block"><h4>Cohort · ${escHtml(cfg.mode || '?')}</h4>` +
+          `<span class="placeholder-msg">Nobody has published a URL yet.</span></div>`;
+        addLog('warn', 'roster is empty'); return;
+      }
+
+      const rows = agents.map((a, i) => {
+        const id = escHtml(a.student_id || '?');
+        const name = escHtml(a.student_name || a.tag || '');
+        const base = a.base_url || '';
+        const sub = name && name !== id ? `<div class="muted-sm">${name}</div>` : '';
+        const useBtn = base
+          ? `<button class="btn-demo" onclick="useAgent('${encodeURIComponent(base)}')">Use</button>` : '';
+        return `<tr>
+          <td>${id}${sub}</td>
+          <td class="url-cell">${escHtml(base) || '-'}</td>
+          <td><span class="state-pill" id="rost-st-${i}">checking…</span></td>
+          <td>${useBtn}</td></tr>`;
+      }).join('');
+
+      document.getElementById('output-body').innerHTML =
+        `<div class="out-block"><h4>Cohort · ${escHtml(cfg.mode || '?')} · ${agents.length} agent(s)</h4>
+         <table class="roster"><thead><tr><th>Agent</th><th>Base URL</th><th>Status</th><th></th></tr></thead>
+         <tbody>${rows}</tbody></table></div>`;
+      addLog('success', `roster: ${agents.length} agent(s) - probing /health…`);
+
+      // Each visitor's browser probes every agent directly: works because the agents
+      // ship wildcard CORS, and it costs the cohort nothing to run.
+      agents.forEach((a, i) => probeAgent(a.base_url, i));
+    } catch (e) {
+      document.getElementById('output-body').innerHTML =
+        `<div class="error-box">Could not sweep the cohort\n${escHtml(e.message)}</div>`;
+      addLog('error', 'cohort: ' + e.message);
+    } finally { setLoading(false); }
+  }
+
+  async function probeAgent(base, i) {
+    const el = document.getElementById(`rost-st-${i}`);
+    if (!el || !base) { if (el) el.textContent = '-'; return; }
+    const host = hostOf(base);
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 6000);
+    const t0 = performance.now();
+    try {
+      const r = await fetch(`${base.replace(/\/$/, '')}/health`, { signal: ctrl.signal, cache: 'no-store' });
+      el.className = 'state-pill ' + (r.ok ? 'state-completed' : 'state-failed');
+      el.textContent = r.ok ? 'up' : `HTTP ${r.status}`;
+      addLog(r.ok ? 'success' : 'warn', `probe ${host}/health → ${r.ok ? 'up' : 'HTTP ' + r.status} · ${_ms(t0)}ms`);
+    } catch {
+      el.className = 'state-pill state-failed';   // unreachable, tunnel dead, or CORS refused
+      el.textContent = 'unreachable';
+      addLog('warn', `probe ${host}/health → unreachable · ${_ms(t0)}ms`);
+    } finally { clearTimeout(timer); }
+  }
+
+  // Point the Target above at a rostered agent and connect - the whole reason to sweep.
+  function useAgent(encodedBase) {
+    const base = decodeURIComponent(encodedBase);
+    addLog('info', `▸ selected ${hostOf(base)} from the roster`);
+    document.getElementById('peer-base').value = base;
+    connectTo();
+    switchTab('a2a');
+  }
+
+  // ── MCP over Streamable HTTP, from the browser ─────────────────────────────
+  // A browser cannot use the Python MCP SDK, so this speaks the wire protocol by hand:
+  // a handshake (initialize), a session id threaded through every later call, and
+  // responses framed as Server-Sent Events. Point at your own origin (solo) or a
+  // peer's (online) and the identical exchange drives a different server.
+
+  async function mcpRpc(method, params) {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json, text/event-stream',
+      'Authorization': 'Bearer ' + TOKEN,
+    };
+    if (MCP_SESSION) headers['mcp-session-id'] = MCP_SESSION;
+    const isNotification = method.startsWith('notifications/');
+    const rpc = { jsonrpc: '2.0', method };
+    if (params !== undefined) rpc.params = params;
+    if (!isNotification) rpc.id = Date.now();
+
+    const r = await fetch(`${BASE}/mcp/`, { method: 'POST', headers, body: JSON.stringify(rpc) });
+    // The initialize response hands the session id back in a header - readable only
+    // because the server sets Access-Control-Expose-Headers (see app/main.py).
+    const sid = r.headers.get('mcp-session-id');
+    if (sid) MCP_SESSION = sid;
+    if (!r.ok) throw new Error('HTTP ' + r.status + ' - ' + (await r.text()).slice(0, 160));
+    // Drain the body even for a notification (202, empty): leaving it unread makes the
+    // browser abort the connection, which clutters the network log with ERR_ABORTED.
+    const text = await r.text();
+    if (isNotification) return null;
+    const data = text.split(/\r?\n/).filter((l) => l.startsWith('data:'))
+      .map((l) => l.slice(5).trim()).pop();
+    const msg = data ? JSON.parse(data) : null;
+    if (msg && msg.error) throw new Error(msg.error.message || JSON.stringify(msg.error));
+    return msg ? msg.result : null;
+  }
+
+  let MCP_SERVER_INFO = null;   // the initialize result: {protocolVersion, capabilities, serverInfo}
+  async function mcpConnect() {
+    MCP_SESSION = null;   // a fresh handshake every time
+    MCP_SERVER_INFO = await mcpRpc('initialize', { protocolVersion: '2025-06-18', capabilities: {},
+                                 clientInfo: { name: 'agentmesh-ui', version: '1' } });
+    await mcpRpc('notifications/initialized');   // the spec's required follow-up
+    return MCP_SERVER_INFO;
+  }
+
+  async function mcpList() {
+    clearOutput(); setLoading(true);
+    const target = BASE === API ? 'your own service (solo)' : BASE;
+    document.getElementById('output-tag').textContent = '/mcp/';
+    addLog('info', `🔌 MCP initialize → /mcp/${at()}`);
+    const t0 = performance.now();
+    try {
+      await mcpConnect();
+      addLog('info', `↳ MCP session ${MCP_SESSION ? MCP_SESSION.slice(0, 8) + '…' : '(none)'} · ${_ms(t0)}ms`);
+      // Sequential, not Promise.all: an MCP session is one conversation, and firing
+      // three requests into it at once is asking the server to interleave them - and
+      // three un-cached CORS preflights racing can wedge the first call. One at a time
+      // is a few ms slower and never flaky.
+      const tools     = await mcpRpc('tools/list', {});
+      const resources = await mcpRpc('resources/list', {});
+      const prompts   = await mcpRpc('prompts/list', {});
+      MCP_TOOLS = tools.tools;
+
+      const line = (kind, items) =>
+        `<div class="mcp-line"><span class="mcp-kind">${kind}</span><span class="mcp-items">${escHtml(items.join(', '))}</span></div>`;
+      document.getElementById('output-body').innerHTML =
+        `<div class="out-block"><h4>MCP surface · ${escHtml(target)}</h4>` +
+        line('tools', MCP_TOOLS.map((t) => t.name)) +
+        line('resources', resources.resources.map((x) => x.name)) +
+        line('prompts', prompts.prompts.map((p) => p.name)) +
+        `</div>`;
+      addLog('success', `MCP list → ${MCP_TOOLS.length} tools · ${resources.resources.length} resources · ${prompts.prompts.length} prompts · ${_ms(t0)}ms total`);
+
+      const sel = document.getElementById('mcp-tool');
+      sel.innerHTML = MCP_TOOLS.map((t) => `<option value="${escHtml(t.name)}">${escHtml(t.name)}</option>`).join('');
+      sel.value = MCP_TOOLS.some((t) => t.name === 'cohort_lookup') ? 'cohort_lookup' : (MCP_TOOLS[0]?.name || '');
+    } catch (e) {
+      document.getElementById('output-body').innerHTML = `<div class="error-box">MCP error against ${escHtml(target)}\n${escHtml(e.message)}\n\n${escHtml(authHintText(e.message))}</div>`;
+      addLog('error', 'MCP: ' + e.message);
+    } finally { setLoading(false); }
+  }
+
+  // The MCP tab's Call Tool button - reads the picker + args field.
+  function mcpCall() {
+    const name = document.getElementById('mcp-tool').value;
+    if (!name) { addLog('warn', 'Run "MCP: Connect & List" first to load the tools.'); return; }
+    const raw = document.getElementById('mcp-args').value.trim();
+    let args = {};
+    if (raw) { try { args = JSON.parse(raw); }
+      catch { addLog('warn', 'MCP args must be JSON, e.g. {"student_id":"stu_002"}'); return; } }
+    return callMcp('tools/call', { name, arguments: args }, `tools/call ${name}`,
+      (res) => res.structuredContent ?? res.content ?? res);
+  }
+
+  // One MCP request, rendered - shared by Call Tool and every clickable capability
+  // (tools, resources, prompts). `extract` pulls the human-facing bit out of the result.
+  async function callMcp(method, params, label, extract) {
+    setLoading(true);
+    document.getElementById('output-tag').textContent = `/mcp/ ${method}`;
+    addLog('info', `🔧 MCP ${label}${at()}`);
+    const t0 = performance.now();
+    try {
+      if (!MCP_SESSION) await mcpConnect();
+      const res = await mcpRpc(method, params);
+      const out = extract ? extract(res) : res;
+      const rendered = typeof out === 'string' ? `<pre>${escHtml(out)}</pre>` : `<pre>${highlightJSON(out)}</pre>`;
+      document.getElementById('output-body').innerHTML =
+        `<div class="out-block"><h4>${escHtml(label)}</h4>${rendered}</div>`;
+      _rawOutputText = typeof out === 'string' ? out : JSON.stringify(out, null, 2);
+      _showFormatBtn(typeof out !== 'string');
+      addLog('success', `↳ ${label} → ok · ${_ms(t0)}ms`);
+    } catch (e) {
+      document.getElementById('output-body').innerHTML =
+        `<div class="error-box">${escHtml(label)} failed\n${escHtml(e.message)}\n\n${escHtml(authHintText(e.message))}</div>`;
+      addLog('error', 'MCP: ' + e.message);
+    } finally { setLoading(false); }
+  }
+
+  // ── Use a capability: collect any args, then invoke it ─────────────────────
+  // The Capabilities view stores the inspected surface here; the chips call use*(i).
+  let CAPS = { skills: [], tools: [], resources: [], templates: [], prompts: [] };
+
+  // prompt() for each field. Returns the arg object, or null if cancelled.
+  function _collectArgs(fields) {
+    const args = {};
+    for (const f of fields) {
+      const v = window.prompt(`${f.name}${f.required ? ' (required)' : ' (optional - blank to skip)'}:`, f.default || '');
+      if (v === null) return null;                       // cancelled
+      if (v === '' && !f.required) continue;
+      args[f.name] = v;
+    }
+    return args;
+  }
+
+  function useSkill(i) {
+    const s = CAPS.skills[i];
+    if (s.id === 'whoami') return submitSkill('whoami', {});
+    // triage_incident (or any skill with a description): collect it, then run - the
+    // approval gate, if any, appears in the output just like the A2A tab.
+    const args = _collectArgs([
+      { name: 'description', required: true, default: document.getElementById('notes').value },
+      { name: 'severity', required: false, default: document.getElementById('severity').value },
+      { name: 'user_id', required: false, default: document.getElementById('user_id').value },
+    ]);
+    if (args === null) return;
+    submitSkill(s.id, args);
+  }
+
+  function useTool(i) {
+    const t = CAPS.tools[i];
+    const props = (t.inputSchema && t.inputSchema.properties) || {};
+    const required = (t.inputSchema && t.inputSchema.required) || [];
+    const args = _collectArgs(Object.keys(props).map((k) => ({ name: k, required: required.includes(k) })));
+    if (args === null) return;
+    callMcp('tools/call', { name: t.name, arguments: args }, `tools/call ${t.name}`,
+      (res) => res.structuredContent ?? res.content ?? res);
+  }
+
+  function useResource(i) {
+    const uri = CAPS.resources[i].uri;
+    callMcp('resources/read', { uri }, `resources/read ${uri}`,
+      (res) => (res.contents || []).map((c) => c.text ?? c.blob ?? '').join('\n') || res);
+  }
+
+  function useTemplate(i) {
+    let uri = CAPS.templates[i].uriTemplate;
+    for (const v of [...uri.matchAll(/\{(\w+)\}/g)].map((m) => m[1])) {
+      const val = window.prompt(`${v}:`, '');
+      if (val === null) return;
+      uri = uri.replace(`{${v}}`, encodeURIComponent(val));
+    }
+    callMcp('resources/read', { uri }, `resources/read ${uri}`,
+      (res) => (res.contents || []).map((c) => c.text ?? c.blob ?? '').join('\n') || res);
+  }
+
+  function usePrompt(i) {
+    const p = CAPS.prompts[i];
+    const args = _collectArgs((p.arguments || []).map((a) => ({ name: a.name, required: !!a.required })));
+    if (args === null) return;
+    callMcp('prompts/get', { name: p.name, arguments: args }, `prompts/get ${p.name}`,
+      (res) => (res.messages || []).map((m) => m.content?.text ?? '').join('\n') || res);
+  }
+
+  // Turn a raw error into the RIGHT next step. The failure that trips everyone up is a
+  // jwks server rejecting the demo token - which looks like an MCP/A2A problem and is not.
+  function authHintText(msg) {
+    if (/401|auth_invalid|missing_bearer|not enough segments/i.test(msg)) {
+      if (SERVER_AUTH === 'jwks')
+        return 'This service runs AUTH_MODE=jwks, so it wants a real signed JWT - "' + TOKEN +
+          '" is not one. For local testing set AUTH_MODE=dev in .env and restart uvicorn; ' +
+          'online, paste a Firebase token from boss.token() into the token field above and Connect.';
+      return 'The bearer above is not one this service accepts. Check the token, or the server AUTH_MODE.';
+    }
+    if (/403|scope_missing/i.test(msg))
+      return 'The token is valid but lacks the required scope. Online: ask the instructor to grant it, then boss.refresh() and re-Connect.';
+    return 'Is the service up, and - online - is the peer\'s tunnel live?';
+  }
+  // Inline variant for A2A errors appended to a log line.
+  function authHint(msg) {
+    return /401|403|auth_invalid|scope_missing|not enough segments/i.test(msg) ? ' — ' + authHintText(msg) : '';
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     CORE: Init
+     ════════════════════════════════════════════════════════════════ */
+  document.getElementById('peer-base').placeholder = 'blank = ' + API;
+  _watchLogCount();
+  switchTab('a2a');
+  addLog('info', `AgentMesh UI ready · serving from ${API_HOST} · every request below is timestamped here`);
+  _booted = true;   // from here on, tab switches are logged as feature usage
+  checkHealth();
+</script>
+</body>
+</html>

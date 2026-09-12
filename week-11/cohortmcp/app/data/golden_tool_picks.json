@@ -1,0 +1,10 @@
+[
+  {"id": "g1", "request": "Which student handles escalation routing for the cohort?", "expected_tool": "cohort_lookup"},
+  {"id": "g2", "request": "Look up cohort member stu_002's profile.", "expected_tool": "cohort_lookup"},
+  {"id": "g3", "request": "Who is Alice and what host is her service on?", "expected_tool": "cohort_lookup"},
+  {"id": "g4", "request": "Have we seen any incidents related to payments timing out?", "expected_tool": "incident_history"},
+  {"id": "g5", "request": "Search incident history for database replication problems.", "expected_tool": "incident_history"},
+  {"id": "g6", "request": "Any past incidents mentioning JWKS caching?", "expected_tool": "incident_history"},
+  {"id": "g7", "request": "Find the cohort member whose specialty is action-execution.", "expected_tool": "cohort_lookup"},
+  {"id": "g8", "request": "Show me incidents about deploy timeouts.", "expected_tool": "incident_history"}
+]

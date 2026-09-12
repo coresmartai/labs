@@ -1,0 +1,5 @@
+{
+  "stu_001": {"name": "Alice", "specialty": "knowledge-retrieval", "host": "localhost:8001"},
+  "stu_002": {"name": "Bob", "specialty": "action-execution", "host": "localhost:8002"},
+  "stu_003": {"name": "Cleo", "specialty": "escalation-routing", "host": "localhost:8003"}
+}

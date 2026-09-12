@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "toolbridge"
+version = "0.1.0"
+description = "An MCP server that exposes a remote A2A agent's skills as tools."
+requires-python = ">=3.10"
+dependencies = [
+    "mcp==2.2.0",
+    "httpx==0.28.1",
+    "pydantic==2.13.5",
+    "pydantic-settings==2.7.1",
+]
+
+# TASK 6: make this installable.
+#
+# Two things are missing and the tests name both.
+#
+# 1. An entrypoint, so that `pip install .` puts a `toolbridge` command on PATH.
+#    Without it, consuming this server means having your source tree, which is
+#    not consuming it at all. The function to point at is app.mcp_server:main.
+#
+# 2. Package data. app/data/golden_tool_picks.json has to travel inside the
+#    wheel, or the install succeeds and the first run cannot find its own
+#    golden set.
+#
+# Then prove it:
+#   python -m venv /tmp/clean_env
+#   /tmp/clean_env/bin/pip install .
+#   /tmp/clean_env/bin/toolbridge
+
+[tool.setuptools]
+packages = ["app"]

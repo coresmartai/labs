@@ -1,0 +1,16 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+dist/
+build/
+*.egg-info/
+.coverage
+.DS_Store
+
+/data/
+
+# Auto-saved activity logs (rotating)
+/logs/

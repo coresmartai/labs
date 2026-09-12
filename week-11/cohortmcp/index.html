@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CohortMCP - Applied GenAI & Agentic AI Engineering Course Week 11</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0d1117;
+      --surface:     #161b22;
+      --surface-2:   #21262d;
+      --surface-3:   #2d333b;
+      --border:      #30363d;
+      --text:        #e6edf3;
+      --text-muted:  #7d8590;
+      --blue:        #58a6ff;
+      --blue-dim:    #1f3a5f;
+      --green:       #3fb950;
+      --green-dim:   #1a3a28;
+      --red:         #f85149;
+      --red-dim:     #3d1a1a;
+      --orange:      #d29922;
+      --radius:      8px;
+      --mono:        'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; height: 52px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 15px; font-weight: 600; color: var(--text);
+    }
+    .header-title .logo {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #1a56db, #7e3af2);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+    }
+    .week-badge {
+      background: var(--blue-dim); color: var(--blue);
+      font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 20px;
+      border: 1px solid #1f4080;
+    }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+
+    button {
+      cursor: pointer; border: none; border-radius: var(--radius);
+      font-size: 13px; font-weight: 500;
+      transition: opacity 0.15s, transform 0.1s;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .btn-ghost {
+      background: transparent; color: var(--text-muted);
+      border: 1px solid var(--border); padding: 6px 12px;
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+
+    .btn-primary { background: #1a56db; color: #fff; padding: 8px 16px; }
+    .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+
+    .btn-secondary {
+      background: var(--surface-2); color: var(--text);
+      border: 1px solid var(--border); padding: 8px 16px;
+    }
+    .btn-secondary:hover:not(:disabled) { background: var(--surface-3); }
+
+    .btn-demo {
+      background: transparent; color: var(--blue);
+      border: 1px solid var(--blue-dim); padding: 5px 12px; font-size: 12px;
+    }
+    .btn-demo:hover:not(:disabled) { background: var(--blue-dim); }
+
+    #health-chip {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px;
+      font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text-muted);
+    }
+    #health-chip:hover { background: var(--surface-3); }
+    #health-chip.online  { color: var(--green); border-color: #1a4a2e; }
+    #health-chip.offline { color: var(--red);   border-color: #4a1a1a; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+    .online  .dot { background: var(--green); box-shadow: 0 0 6px #3fb95088; animation: pulse 2s infinite; }
+    .offline .dot { background: var(--red); }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    main {
+      display: grid; grid-template-columns: 380px 1fr;
+      flex: 1; overflow: hidden;
+    }
+
+    .left-panel {
+      display: flex; flex-direction: column;
+      border-right: 1px solid var(--border); overflow: hidden;
+    }
+
+    .panel-section { padding: 16px; border-bottom: 1px solid var(--border); }
+    .panel-section:last-child { border-bottom: none; }
+
+    label {
+      display: block; font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); margin-bottom: 8px;
+    }
+
+    textarea, input[type="email"], input[type="text"], select {
+      width: 100%; background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text); font-size: 13px; font-family: inherit;
+      outline: none; transition: border-color 0.15s;
+    }
+    textarea { resize: none; }
+    textarea:focus, input:focus, select:focus {
+      border-color: var(--blue); box-shadow: 0 0 0 3px #1a56db22;
+    }
+
+    #notes {
+      flex: 1; min-height: 0; height: 0;
+      padding: 10px 12px; line-height: 1.6;
+    }
+
+    input[type="email"], input[type="text"] { padding: 8px 12px; height: 38px; }
+    select { padding: 8px 12px; height: 38px; cursor: pointer; }
+    select option { background: var(--surface-2); }
+
+    .input-row {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 8px;
+    }
+
+    .action-btns { display: flex; flex-direction: column; gap: 8px; padding: 16px; }
+    .action-btns button { width: 100%; justify-content: center; }
+
+    .right-panel { display: flex; flex-direction: column; overflow: hidden; }
+
+    .pane { display: flex; flex-direction: column; overflow: hidden; }
+    .pane-output { flex: 1; border-bottom: 1px solid var(--border); }
+    .pane-logs   { height: 200px; flex-shrink: 0; }
+
+    .pane-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); flex-shrink: 0;
+    }
+
+    .pane-body {
+      flex: 1; overflow-y: auto; padding: 16px;
+      font-family: var(--mono); font-size: 13px; line-height: 1.6;
+    }
+    .pane-body::-webkit-scrollbar { width: 6px; }
+    .pane-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .placeholder-msg { color: var(--text-muted); font-family: inherit; font-size: 13px; font-style: italic; }
+
+    .j-k    { color: #79c0ff; }
+    .j-s    { color: #a5d6ff; }
+    .j-n    { color: #ffa657; }
+    .j-b    { color: #7ee787; }
+    .j-null { color: var(--text-muted); }
+
+    #output-body.streaming::after {
+      content: '▋'; animation: blink 0.8s step-end infinite; color: var(--blue);
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .log-entry { display: flex; gap: 10px; padding: 2px 0; font-size: 12px; line-height: 1.5; }
+    .log-ts    { color: var(--text-muted); flex-shrink: 0; }
+    .log-level { font-weight: 700; flex-shrink: 0; width: 50px; }
+    .log-msg   { color: var(--text); word-break: break-word; }
+    .log-info    .log-level { color: var(--blue); }
+    .log-success .log-level { color: var(--green); }
+    .log-warn    .log-level { color: var(--orange); }
+    .log-error   .log-level { color: var(--red); }
+
+    .spinner {
+      display: none; width: 14px; height: 14px;
+      border: 2px solid var(--border); border-top-color: var(--blue);
+      border-radius: 50%; animation: spin 0.6s linear infinite; flex-shrink: 0;
+    }
+    .spinner.active { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: var(--red-dim); border: 1px solid #6b2020;
+      border-radius: var(--radius); padding: 12px;
+      color: var(--red); font-family: var(--mono); font-size: 12px; white-space: pre-wrap;
+    }
+
+    .left-panel { overflow-y: auto; }
+
+    .hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+
+    .mcp-feature-list { display: flex; flex-direction: column; gap: 7px; }
+    .mcp-feature {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; color: var(--text-muted);
+    }
+    .mcp-feature.used { color: var(--text); font-weight: 600; }
+    .mcp-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--border); flex-shrink: 0;
+    }
+    .mcp-feature.used .mcp-dot { background: var(--green); box-shadow: 0 0 4px #3fb95088; }
+    .mcp-note { margin-left: auto; font-size: 10px; color: var(--text-muted); font-style: italic; }
+
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-title">
+    <div class="logo">🤖</div>
+    Applied GenAI & Agentic AI Engineering Course
+    <span class="week-badge">Week 11</span>
+    <span class="header-sub">- CohortMCP</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn-ghost" onclick="window.open(API + '/readme','_blank')">📖 README</button>
+    <div id="health-chip" onclick="checkHealth()" title="Click to re-check">
+      <span class="dot"></span>
+      <span id="health-text">Checking…</span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <div class="left-panel">
+
+    <div class="panel-section" style="flex:1; display:flex; flex-direction:column; min-height:180px;">
+      <div class="input-row">
+        <label style="margin:0">Natural-language request</label>
+        <button class="btn-demo" onclick="fillDemo()">↺ Fill Demo</button>
+      </div>
+      <textarea id="notes" placeholder="Ask something the cohort MCP server's tools could answer…"></textarea>
+      <div class="hint">Sent to <code>POST /eval/pick</code> - the pinned model chooses which tool to call.</div>
+    </div>
+
+    <div class="panel-section">
+      <label>Direct tool call</label>
+      <select id="tool-select" onchange="updateToolArgHint()">
+        <option value="cohort_lookup">cohort_lookup</option>
+        <option value="incident_history">incident_history</option>
+      </select>
+      <div style="height:8px"></div>
+      <input type="text" id="tool-arg" placeholder="e.g. stu_001" />
+      <div class="hint" id="tool-arg-hint">Argument: student_id</div>
+    </div>
+
+    <div class="panel-section">
+      <label>MCP feature surface</label>
+      <div class="mcp-feature-list">
+        <div class="mcp-feature used"><span class="mcp-dot"></span> Tools <span class="mcp-note">cohort_lookup, incident_history</span></div>
+        <div class="mcp-feature"><span class="mcp-dot"></span> Resources</div>
+        <div class="mcp-feature"><span class="mcp-dot"></span> Prompts</div>
+        <div class="mcp-feature"><span class="mcp-dot"></span> Sampling</div>
+        <div class="mcp-feature"><span class="mcp-dot"></span> Roots</div>
+        <div class="mcp-feature"><span class="mcp-dot"></span> Elicitation</div>
+      </div>
+      <div class="hint">Full MCP spec surface - this build implements Tools only. See README §2.</div>
+    </div>
+
+    <div class="action-btns">
+      <button class="btn-primary" id="btn-pick" onclick="doPick()">
+        <span id="spin-pick" class="spinner"></span>
+        🧠 &nbsp;Ask Model to Pick a Tool
+      </button>
+      <button class="btn-secondary" id="btn-call" onclick="doCall()">
+        <span id="spin-call" class="spinner"></span>
+        🔧 &nbsp;Call Tool Directly
+      </button>
+      <button class="btn-secondary" id="btn-eval" onclick="doEval()">
+        <span id="spin-eval" class="spinner"></span>
+        📊 &nbsp;Run Tool-Pick Eval
+      </button>
+    </div>
+
+  </div>
+
+  <div class="right-panel">
+
+    <div class="pane pane-output">
+      <div class="pane-header">
+        Output
+        <div style="display:flex;gap:8px;align-items:center">
+          <span id="output-tag" style="font-size:11px;color:var(--text-muted)"></span>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px;display:none" id="btn-format" onclick="toggleFormat()">{ } Format</button>
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearOutput()">✕ Clear</button>
+        </div>
+      </div>
+      <div class="pane-body" id="output-body">
+        <span class="placeholder-msg">Response will appear here…</span>
+      </div>
+    </div>
+
+    <div class="pane pane-logs">
+      <div class="pane-header">
+        Logs
+        <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearLogs()">✕ Clear</button>
+      </div>
+      <div class="pane-body" id="logs-body">
+        <span class="placeholder-msg">Request logs will appear here…</span>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  const API = window.location.origin.startsWith('http')
+    ? window.location.origin : 'http://localhost:8000';
+  
+  let _rawOutputText = '';
+  let _isFormatted   = false;
+
+  function _fmtDetail(detail, fallback) {
+    if (!detail) return fallback || 'Unknown error';
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail))
+      return detail.map(d => d.msg || JSON.stringify(d)).join(' | ');
+    return JSON.stringify(detail);
+  }
+
+  function _showFormatBtn(show) {
+    document.getElementById('btn-format').style.display = show ? '' : 'none';
+    _isFormatted = false;
+    document.getElementById('btn-format').textContent = '{ } Format';
+  }
+
+  function toggleFormat() {
+    const body = document.getElementById('output-body');
+    const btn  = document.getElementById('btn-format');
+    if (!_isFormatted) {
+      let src = _rawOutputText.trim();
+      if (src.startsWith('```')) {
+        const inner = src.split('```')[1] || '';
+        src = inner.startsWith('json') ? inner.slice(4).trim() : inner.trim();
+      }
+      try {
+        body.innerHTML = `<pre>${highlightJSON(JSON.parse(src))}</pre>`;
+        _isFormatted = true; btn.textContent = '≡ Raw';
+        addLog('info', 'Output formatted as JSON.');
+      } catch { addLog('warn', 'Could not parse output as JSON.'); }
+    } else {
+      body.textContent = _rawOutputText;
+      _isFormatted = false; btn.textContent = '{ } Format';
+    }
+  }
+
+  function clearOutput() {
+    document.getElementById('output-body').innerHTML =
+      '<span class="placeholder-msg">Response will appear here…</span>';
+    document.getElementById('output-tag').textContent = '';
+    _rawOutputText = ''; _showFormatBtn(false);
+  }
+
+  function clearLogs() {
+    document.getElementById('logs-body').innerHTML =
+      '<span class="placeholder-msg">Request logs will appear here…</span>';
+  }
+
+  function addLog(level, msg) {
+    const body = document.getElementById('logs-body');
+    const ph   = body.querySelector('.placeholder-msg');
+    if (ph) ph.remove();
+    const now = new Date().toLocaleTimeString('en-GB', {hour12: false});
+    const div = document.createElement('div');
+    div.className = `log-entry log-${level}`;
+    div.innerHTML =
+      `<span class="log-ts">${now}</span>` +
+      `<span class="log-level">${level.toUpperCase()}</span>` +
+      `<span class="log-msg">${escHtml(msg)}</span>`;
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  function highlightJSON(obj) {
+    const str = JSON.stringify(obj, null, 2);
+    return escHtml(str).replace(
+      /(&quot;(?:\\u[0-9a-fA-F]{4}|\\[^u]|[^\\&])*&quot;(?:\s*:)?|\b(?:true|false)\b|\bnull\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      match => {
+        let c = 'n';
+        if (match.startsWith('&quot;'))
+          c = match.endsWith(':') ? 'k' : 's';
+        else if (match === 'true' || match === 'false') c = 'b';
+        else if (match === 'null') c = 'null';
+        return `<span class="j-${c}">${match}</span>`;
+      }
+    );
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function setLoading(active) {
+    document.querySelectorAll('.action-btns button').forEach(b => b.disabled = active);
+    document.querySelectorAll('.spinner').forEach(s => s.classList.toggle('active', active));
+  }
+
+  const DEMO_NOTES = 'Which student is handling escalation routing for the cohort?';
+
+  const TOOL_ARG_KEY = { cohort_lookup: 'student_id', incident_history: 'query' };
+  const TOOL_ARG_PLACEHOLDER = { cohort_lookup: 'e.g. stu_001', incident_history: 'INC-101' };
+
+  function updateToolArgHint() {
+    const tool = document.getElementById('tool-select').value;
+    document.getElementById('tool-arg-hint').textContent = `Argument: ${TOOL_ARG_KEY[tool]}`;
+    document.getElementById('tool-arg').placeholder = TOOL_ARG_PLACEHOLDER[tool];
+  }
+
+  // Override - logs tool_description_quality + mcp_transport
+  // alongside the model name. Redefined here; this definition wins.
+  async function checkHealth() {
+    const chip = document.getElementById('health-chip');
+    const txt  = document.getElementById('health-text');
+    chip.className = ''; txt.textContent = 'Checking…';
+    try {
+      const r    = await fetch(`${API}/health`);
+      const data = await r.json();
+      chip.className  = 'online';
+      txt.textContent = `Online · ${data.model}`;
+      addLog('success', `Health OK - model: ${data.model} | tool_description_quality: ${data.tool_description_quality} | mcp_transport: ${data.mcp_transport}`);
+    } catch (e) {
+      chip.className  = 'offline';
+      txt.textContent = 'Offline';
+      addLog('error', `Health check failed - is the server running? (${e.message})`);
+    }
+  }
+
+  function fillDemo() {
+    document.getElementById('notes').value = DEMO_NOTES;
+    addLog('info', 'Demo input loaded.');
+  }
+
+  // Primary action - the pinned model picks a tool via function calling.
+  async function doPick() {
+    const request = document.getElementById('notes').value.trim();
+    if (!request) { addLog('warn', 'Input is empty.'); return; }
+
+    clearOutput(); setLoading(true);
+    document.getElementById('output-tag').textContent = '/eval/pick';
+    addLog('info', 'POST /eval/pick');
+
+    try {
+      const r    = await fetch(`${API}/eval/pick`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ request }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+      document.getElementById('output-body').innerHTML = `<pre>${highlightJSON(data)}</pre>`;
+      _rawOutputText = JSON.stringify(data, null, 2);
+      _showFormatBtn(true);
+      addLog('success', `Model picked: ${data.tool ?? '(no tool call)'} - ${data.latency_ms}ms`);
+    } catch (e) {
+      document.getElementById('output-body').innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally { setLoading(false); }
+  }
+
+  // Secondary action - call a tool directly, bypassing the model (tools/call over HTTP).
+  async function doCall() {
+    const tool = document.getElementById('tool-select').value;
+    const argValue = document.getElementById('tool-arg').value.trim();
+    if (!argValue) { addLog('warn', 'Argument is empty.'); return; }
+
+    clearOutput(); setLoading(true);
+    document.getElementById('output-tag').textContent = '/demo/call';
+    addLog('info', `POST /demo/call - ${tool}`);
+
+    const arguments_ = { [TOOL_ARG_KEY[tool]]: argValue };
+    try {
+      const r    = await fetch(`${API}/demo/call`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ name: tool, arguments: arguments_ }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+      document.getElementById('output-body').innerHTML = `<pre>${highlightJSON(data)}</pre>`;
+      _rawOutputText = JSON.stringify(data, null, 2);
+      _showFormatBtn(true);
+      if (data.success) addLog('success', `${tool} ok - trace_id ${data.trace_id}`);
+      else addLog('error', `${tool} failed - ${data.error?.code}: ${data.error?.message}`);
+    } catch (e) {
+      document.getElementById('output-body').innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally { setLoading(false); }
+  }
+
+  // Tertiary action - run the golden tool-pick set and show accuracy.
+  async function doEval() {
+    clearOutput(); setLoading(true);
+    document.getElementById('output-tag').textContent = '/eval/run';
+    addLog('info', 'GET /eval/run - scoring golden tool-pick set…');
+
+    try {
+      const r    = await fetch(`${API}/eval/run`);
+      const data = await r.json();
+      if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+      document.getElementById('output-body').innerHTML = `<pre>${highlightJSON(data)}</pre>`;
+      _rawOutputText = JSON.stringify(data, null, 2);
+      _showFormatBtn(true);
+      addLog('success', `Eval done - ${data.correct}/${data.total} correct (${(data.accuracy*100).toFixed(0)}%), quality=${data.quality}`);
+    } catch (e) {
+      document.getElementById('output-body').innerHTML = `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally { setLoading(false); }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     CORE: Init
+     ════════════════════════════════════════════════════════════════ */
+  updateToolArgHint();
+  checkHealth();
+</script>
+</body>
+</html>
