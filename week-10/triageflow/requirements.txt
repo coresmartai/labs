@@ -1,0 +1,20 @@
+fastapi==0.115.6
+markdown==3.7
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+openai==2.14.0
+tenacity==9.0.0
+langgraph==1.2.9
+langgraph-checkpoint-postgres==3.0.5
+psycopg[binary,pool]==3.2.3
+redis==5.2.1
+httpx==0.28.1
+python-multipart==0.0.17
+pytest==8.3.4
+pytest-asyncio==0.24.0
+
+# The default vector-store backend is in-process and needs nothing extra.
+# For the real Postgres + pgvector backend (no Docker):
+#   pip install -r requirements-pgvector.txt
+

@@ -1,0 +1,15 @@
+# Optional: the real-Postgres vector-store backend (MEMORY_BACKEND=pgvector).
+#
+#   pip install -r requirements-pgvector.txt
+#   MEMORY_BACKEND=pgvector uvicorn app.main:app --reload
+#
+# pgserver bundles PostgreSQL 16.2 AND the pgvector 0.6.2 extension inside the
+# wheel, for Linux, macOS and Windows (x86-64). It runs initdb on first use and
+# starts a postmaster owned by this process. No Docker, no daemon, no admin
+# rights, no compose file.
+#
+# It is kept out of requirements.txt on purpose: pgserver publishes wheels for
+# CPython 3.9-3.12 only, so pinning it in the base file would break the lab
+# install on Python 3.13+. The default in-process backend has no such
+# constraint and needs nothing beyond the base requirements.
+pgserver==0.1.4

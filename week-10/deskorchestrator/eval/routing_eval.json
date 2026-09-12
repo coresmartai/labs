@@ -1,0 +1,13 @@
+[
+  {"request": "Replace this with a request that clearly belongs to one route.",
+   "expected": "access",
+   "why": "One sentence: which route and why it is not arguable."},
+
+  {"request": "Replace this with a request that sits near a boundary between two routes.",
+   "expected": "software",
+   "why": "One sentence: which two routes it sits between, and why your label is the right one."},
+
+  {"request": "Replace this with a request that should escalate rather than be handled.",
+   "expected": "escalate_human",
+   "why": "One sentence: what makes this a human's decision rather than the desk's."}
+]

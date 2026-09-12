@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<!--
+  Applied GenAI & Agentic AI Engineering - Week 10: TriageFlow
+  ======================================
+
+  Intentional deviations from the template (documented, not force-fit):
+    1. Two-step flow: /triage may pause at the approval gate; the Approval Gate
+       section is hidden by default and shown dynamically when status=pending_approval.
+    2. Left panel has 4 sections and uses overflow-y:auto (3+ section rule from UI_DESIGN_GUIDE).
+    3. Approve / Reject buttons are in a panel-section, not action-btns - setLoading()
+       is extended in WEEK-SPECIFIC to also disable them.
+    4. checkHealth() overridden to display both triage and knowledge models from data.models.
+    5. No /stream endpoint this week - streaming arrives later.
+    6. Right panel has a persistent pipeline visualizer above output (educational addition).
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Applied GenAI & Agentic AI Engineering - Week 10 · TriageFlow</title>
+  <link rel="icon" href="data:image/svg+xml,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'&gt;&lt;rect width='16' height='16' rx='4' fill='%231a56db'/&gt;&lt;/svg&gt;">
+  <style>
+    /* ══════════════════════════════════════════════════════════════
+       CORE - DO NOT EDIT (shared across all weeks)
+       ══════════════════════════════════════════════════════════════ */
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0d1117;
+      --surface:     #161b22;
+      --surface-2:   #21262d;
+      --surface-3:   #2d333b;
+      --border:      #30363d;
+      --text:        #e6edf3;
+      --text-muted:  #7d8590;
+      --blue:        #58a6ff;
+      --blue-dim:    #1f3a5f;
+      --green:       #3fb950;
+      --green-dim:   #1a3a28;
+      --red:         #f85149;
+      --red-dim:     #3d1a1a;
+      --orange:      #d29922;
+      --radius:      8px;
+      --mono:        'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 20px; height: 52px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .header-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 15px; font-weight: 600; color: var(--text);
+    }
+    .header-title .logo {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #1a56db, #7e3af2);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; flex-shrink: 0;
+    }
+    .week-badge {
+      background: var(--blue-dim); color: var(--blue);
+      font-size: 11px; font-weight: 600;
+      padding: 2px 8px; border-radius: 20px;
+      border: 1px solid #1f4080;
+    }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+
+    button {
+      cursor: pointer; border: none; border-radius: var(--radius);
+      font-size: 13px; font-weight: 500;
+      transition: opacity 0.15s, transform 0.1s;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    .btn-ghost {
+      background: transparent; color: var(--text-muted);
+      border: 1px solid var(--border); padding: 6px 12px;
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+
+    .btn-primary { background: #1a56db; color: #fff; padding: 8px 16px; }
+    .btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+
+    .btn-secondary {
+      background: var(--surface-2); color: var(--text);
+      border: 1px solid var(--border); padding: 8px 16px;
+    }
+    .btn-secondary:hover:not(:disabled) { background: var(--surface-3); }
+
+    .btn-demo {
+      background: transparent; color: var(--blue);
+      border: 1px solid var(--blue-dim); padding: 5px 12px; font-size: 12px;
+    }
+    .btn-demo:hover:not(:disabled) { background: var(--blue-dim); }
+
+    #health-chip {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 20px; padding: 5px 12px;
+      font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text-muted);
+    }
+    #health-chip:hover { background: var(--surface-3); }
+    #health-chip.online  { color: var(--green); border-color: #1a4a2e; }
+    #health-chip.offline { color: var(--red);   border-color: #4a1a1a; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+    .online  .dot { background: var(--green); box-shadow: 0 0 6px #3fb95088; animation: pulse 2s infinite; }
+    .offline .dot { background: var(--red); }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    main {
+      display: grid; grid-template-columns: 360px 1fr;
+      flex: 1; overflow: hidden;
+    }
+
+    .left-panel {
+      display: flex; flex-direction: column;
+      border-right: 1px solid var(--border); overflow-y: hidden;
+    }
+
+    .panel-section { padding: 16px; border-bottom: 1px solid var(--border); }
+    .panel-section:last-child { border-bottom: none; }
+
+    label {
+      display: block; font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); margin-bottom: 8px;
+    }
+
+    textarea, input[type="email"], input[type="text"], select {
+      width: 100%; background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text); font-size: 13px; font-family: inherit;
+      outline: none; transition: border-color 0.15s;
+    }
+    textarea { resize: none; }
+    textarea:focus, input:focus, select:focus {
+      border-color: var(--blue); box-shadow: 0 0 0 3px #1a56db22;
+    }
+
+    #notes { padding: 10px 12px; line-height: 1.6; height: 120px; }
+
+    input[type="email"], input[type="text"] { padding: 8px 12px; height: 38px; }
+
+    .input-row {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 8px;
+    }
+
+    .action-btns { display: flex; flex-direction: column; gap: 8px; padding: 16px; }
+    .action-btns button { width: 100%; justify-content: center; }
+
+    /* Right panel: pipeline sidebar (20%) + content area (80%) side by side */
+    .right-panel { display: flex; flex-direction: row; overflow: hidden; }
+    .right-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+    .pane { display: flex; flex-direction: column; overflow: hidden; }
+    .pane-output { flex: 1; overflow: hidden; }
+    .pane-logs   { height: 180px; flex-shrink: 0; border-top: 1px solid var(--border); }
+
+    .pane-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 16px; background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); flex-shrink: 0;
+    }
+
+    .pane-body {
+      flex: 1; overflow-y: auto; padding: 16px;
+      font-family: var(--mono); font-size: 13px; line-height: 1.6;
+    }
+    .pane-body::-webkit-scrollbar { width: 6px; }
+    .pane-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .placeholder-msg { color: var(--text-muted); font-family: inherit; font-size: 13px; font-style: italic; }
+
+    .j-k    { color: #79c0ff; }
+    .j-s    { color: #a5d6ff; }
+    .j-n    { color: #ffa657; }
+    .j-b    { color: #7ee787; }
+    .j-null { color: var(--text-muted); }
+
+    .log-entry { display: flex; gap: 10px; padding: 2px 0; font-size: 12px; line-height: 1.5; }
+    .log-ts    { color: var(--text-muted); flex-shrink: 0; }
+    .log-level { font-weight: 700; flex-shrink: 0; width: 50px; }
+    .log-msg   { color: var(--text); word-break: break-word; }
+    .log-info    .log-level { color: var(--blue); }
+    .log-success .log-level { color: var(--green); }
+    .log-warn    .log-level { color: var(--orange); }
+    .log-error   .log-level { color: var(--red); }
+
+    .spinner {
+      display: none; width: 14px; height: 14px;
+      border: 2px solid var(--border); border-top-color: var(--blue);
+      border-radius: 50%; animation: spin 0.6s linear infinite; flex-shrink: 0;
+    }
+    .spinner.active { display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: var(--red-dim); border: 1px solid #6b2020;
+      border-radius: var(--radius); padding: 12px;
+      color: var(--red); font-family: var(--mono); font-size: 12px; white-space: pre-wrap;
+    }
+
+    /* ══════════════════════════════════════════════════════════════
+       WEEK-SPECIFIC START
+       ══════════════════════════════════════════════════════════════ */
+
+    :root {
+      --orange-dim: #3a2a00;
+      --purple:     #a371f7;
+      --purple-dim: #2d1f4e;
+    }
+
+    .header-sub { color: var(--text-muted); font-weight: 400; }
+
+    /* ── Left panel step labels ── */
+    .step-header {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+    }
+    .step-num {
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--surface-3); border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .step-num.active { background: var(--blue-dim); border-color: var(--blue); color: var(--blue); }
+    .step-num.done   { background: var(--green-dim); border-color: var(--green); color: var(--green); }
+    .step-num.waiting { background: var(--orange-dim); border-color: var(--orange); color: var(--orange);
+                        animation: pulse 1.2s infinite; }
+    .step-title { font-size: 12px; font-weight: 700; color: var(--text); }
+    .step-desc  { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── Scenario quick-fill pills ── */
+    .demo-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+    .pill {
+      background: var(--surface-2); color: var(--text-muted);
+      border: 1px solid var(--border); border-radius: 20px;
+      padding: 5px 13px; font-size: 12px; font-weight: 500;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .pill:hover { background: var(--surface-3); color: var(--text); border-color: var(--blue); }
+
+    /* ── Approval gate section ── */
+    .approval-gate-section { display: none; }
+
+    .approval-gate-title {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 12px; font-weight: 700; color: var(--orange);
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+    }
+    .gate-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--orange);
+      animation: pulse 1.2s infinite; flex-shrink: 0;
+    }
+    .gate-explain {
+      font-size: 11px; color: var(--text-muted); line-height: 1.5;
+      margin-bottom: 12px; padding: 8px; background: var(--orange-dim);
+      border-radius: 6px; border-left: 2px solid var(--orange);
+    }
+
+    .btn-approve {
+      background: var(--green-dim); color: var(--green);
+      border: 1px solid var(--green); padding: 8px 16px; flex: 1;
+    }
+    .btn-approve:hover:not(:disabled) { background: #1f4a30; }
+
+    .btn-reject {
+      background: var(--red-dim); color: var(--red);
+      border: 1px solid var(--red); padding: 8px 16px; flex: 1;
+    }
+    .btn-reject:hover:not(:disabled) { background: #4a1a1a; }
+
+    /* ── Collapsible LLM call blocks ── */
+    .llm-calls-section { margin-bottom: 12px; }
+
+    details.llm-call {
+      border: 1px solid var(--border); border-radius: var(--radius);
+      margin-bottom: 6px; overflow: hidden;
+    }
+    details.llm-call summary {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 12px; cursor: pointer;
+      background: var(--surface-2); list-style: none;
+      font-size: 12px; font-weight: 600; user-select: none;
+      transition: background 0.15s;
+    }
+    details.llm-call summary::-webkit-details-marker { display: none; }
+    details.llm-call summary:hover { background: var(--surface-3); }
+    details.llm-call[open] summary { border-bottom: 1px solid var(--border); }
+
+    .llm-caret { font-size: 10px; color: var(--text-muted); transition: transform 0.2s; }
+    details.llm-call[open] .llm-caret { transform: rotate(90deg); }
+
+    .llm-step-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; padding: 2px 7px; border-radius: 3px;
+    }
+    .llm-step-triage   { background: var(--blue-dim);   color: var(--blue); }
+    .llm-step-knowledge { background: var(--green-dim);  color: var(--green); }
+    .llm-step-action   { background: var(--orange-dim); color: var(--orange); }
+
+    .llm-model-chip {
+      font-family: var(--mono); font-size: 10px; color: var(--text-muted);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 3px; padding: 1px 6px;
+    }
+    .llm-meta { margin-left: auto; font-size: 10px; color: var(--text-muted); }
+
+    .llm-call-body { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+
+    .llm-field-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 3px;
+    }
+    .llm-field-pre {
+      font-family: var(--mono); font-size: 11px; line-height: 1.55;
+      background: var(--surface); border-radius: 4px; padding: 7px 10px;
+      white-space: pre-wrap; word-break: break-word; color: var(--text);
+    }
+    .llm-response-pre {
+      font-family: var(--mono); font-size: 12px; font-weight: 700;
+      background: var(--surface); border-radius: 4px; padding: 7px 10px;
+      white-space: pre-wrap; color: var(--green);
+    }
+
+    /* ── Redis session memory panel ── */
+    .redis-section {
+      margin-top: 16px;
+      border: 1px solid var(--border); border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .redis-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 12px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+    }
+    .redis-header-label {
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--text-muted); flex: 1;
+    }
+    .redis-key {
+      font-family: var(--mono); font-size: 11px;
+      color: var(--orange); padding: 5px 12px;
+      background: var(--orange-dim);
+      border-bottom: 1px solid var(--border);
+    }
+    .redis-event {
+      display: flex; gap: 8px; align-items: flex-start;
+      padding: 7px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .redis-event:last-child { border-bottom: none; }
+    .redis-idx {
+      font-size: 10px; font-weight: 700;
+      background: var(--surface-3); color: var(--text-muted);
+      border-radius: 3px; padding: 2px 6px;
+      flex-shrink: 0; font-family: var(--mono); margin-top: 1px;
+    }
+    .redis-json {
+      font-family: var(--mono); font-size: 11px;
+      line-height: 1.5; white-space: pre-wrap;
+      word-break: break-all; flex: 1; color: var(--text);
+    }
+    .redis-empty {
+      padding: 10px 12px; font-size: 12px;
+      color: var(--text-muted); font-style: italic;
+    }
+
+    /* ══════════════════════════════════════
+       PIPELINE VISUALIZER
+       ══════════════════════════════════════ */
+    .pipeline-section {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 12px 10px;
+      flex: 0 0 220px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .pipeline-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 10px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 4px;
+    }
+
+    /* ── Pipeline: step cards ── */
+    .pc-flow { display: flex; flex-direction: column; gap: 6px; }
+
+    /* Individual step cards */
+    .pc-card {
+      border: 1px solid var(--border);
+      border-radius: 8px; padding: 11px 13px;
+      background: var(--surface-2); transition: all 0.25s;
+    }
+    .pc-card.idle    { opacity: 0.4; }
+    .pc-card.running {
+      opacity: 1; border-color: var(--blue); background: var(--blue-dim);
+      animation: nodePulse 1s ease-in-out infinite;
+    }
+    .pc-card.done    { opacity: 1; border-color: var(--green); background: var(--green-dim); }
+    .pc-card.paused  {
+      opacity: 1; border-color: var(--orange); background: var(--orange-dim);
+      animation: gatePulse 1.2s ease-in-out infinite;
+    }
+    .pc-card.skipped { opacity: 0.12; }
+    .pc-card-row { display: flex; align-items: center; gap: 9px; }
+    .pc-card-icon { font-size: 18px; line-height: 1; flex-shrink: 0; }
+    .pc-card-body { flex: 1; min-width: 0; }
+    .pc-card-name { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+    .pc-card-sub  { font-size: 10px; color: var(--text-muted); font-family: var(--mono); margin-top: 1px; }
+    .pc-card .pn-state {
+      font-size: 10px; font-weight: 700; color: var(--text-muted);
+      flex-shrink: 0; white-space: nowrap;
+    }
+    .pc-card.running .pc-card-name, .pc-card.running .pn-state { color: var(--blue); }
+    .pc-card.done    .pc-card-name, .pc-card.done    .pn-state { color: var(--green); }
+    .pc-card.paused  .pc-card-name, .pc-card.paused  .pn-state { color: var(--orange); }
+
+    /* Triage routing decision line */
+    .pc-decided {
+      font-size: 10px; font-family: var(--mono); color: var(--green);
+      margin-top: 6px; font-weight: 700; display: none;
+    }
+
+    /* Sequential step connector inside Action box */
+    .pc-step-arrow {
+      text-align: center; color: var(--border);
+      font-size: 14px; line-height: 1.2; transition: color 0.25s;
+    }
+    .pc-step-arrow.done   { color: var(--green); }
+    .pc-step-arrow.paused { color: var(--orange); }
+
+    /* Route / Output section dividers */
+    .pc-divider {
+      display: flex; align-items: center; gap: 5px; margin: 3px 0;
+    }
+    .pc-divider::before, .pc-divider::after {
+      content: ''; flex: 1; height: 1px;
+      background: var(--border); opacity: 0.35;
+    }
+    .pc-divider-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.06em; color: var(--text-muted); white-space: nowrap;
+    }
+
+    /* Route group boxes (Knowledge / Action / Escalate) */
+    .pc-route-box {
+      border: 1px solid var(--border);
+      border-radius: 10px; padding: 10px;
+      display: flex; flex-direction: column; gap: 7px;
+      transition: border-color 0.3s, opacity 0.3s, background 0.3s;
+    }
+    .pc-route-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.07em; color: var(--text-muted);
+      padding-bottom: 7px; border-bottom: 1px solid var(--border);
+      transition: color 0.25s;
+    }
+    /* Box reacts to active child card state via :has() */
+    .pc-route-box:has(.pc-card.running) {
+      border-color: var(--blue);
+    }
+    .pc-route-box:has(.pc-card.running) .pc-route-label { color: var(--blue); }
+    .pc-route-box:has(.pc-card.done):not(:has(.pc-card.running)):not(:has(.pc-card.paused)) {
+      border-color: var(--green);
+    }
+    .pc-route-box:has(.pc-card.done):not(:has(.pc-card.running)):not(:has(.pc-card.paused)) .pc-route-label { color: var(--green); }
+    .pc-route-box:has(.pc-card.paused) {
+      border-color: var(--orange);
+    }
+    .pc-route-box:has(.pc-card.paused) .pc-route-label { color: var(--orange); }
+    /* Dim the whole box when all cards inside are skipped */
+    .pc-route-box:has(.pc-card.skipped):not(:has(.pc-card:not(.skipped))) {
+      opacity: 0.15;
+      pointer-events: none;
+    }
+
+    .pipe-node {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      padding: 7px 11px; border-radius: 7px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      min-width: 72px; flex-shrink: 0;
+      transition: all 0.25s;
+      opacity: 0.4;
+      cursor: default;
+    }
+    .pipe-node .pn-icon  { font-size: 16px; line-height: 1; }
+    .pipe-node .pn-name  { font-size: 10px; font-weight: 700; color: var(--text-muted); text-align: center; white-space: nowrap; }
+    .pipe-node .pn-model { font-size: 9px; color: var(--text-muted); font-family: var(--mono); text-align: center; white-space: nowrap; }
+    .pipe-node .pn-state { font-size: 9px; font-weight: 700; text-align: center; white-space: nowrap; color: var(--text-muted); margin-top: 1px; }
+
+    /* Node states */
+    .pipe-node.idle    { opacity: 0.35; }
+    .pipe-node.running {
+      opacity: 1; border-color: var(--blue);
+      background: var(--blue-dim);
+      box-shadow: 0 0 0 2px #1a56db44;
+      animation: nodePulse 1s ease-in-out infinite;
+    }
+    .pipe-node.running .pn-name  { color: var(--blue); }
+    .pipe-node.running .pn-state { color: var(--blue); }
+    @keyframes nodePulse { 0%,100%{box-shadow:0 0 0 2px #1a56db44;} 50%{box-shadow:0 0 0 4px #1a56db22;} }
+
+    .pipe-node.done {
+      opacity: 1; border-color: var(--green);
+      background: var(--green-dim);
+    }
+    .pipe-node.done .pn-name  { color: var(--green); }
+    .pipe-node.done .pn-state { color: var(--green); }
+
+    .pipe-node.paused {
+      opacity: 1; border-color: var(--orange);
+      background: var(--orange-dim);
+      box-shadow: 0 0 0 2px #d2992244;
+      animation: gatePulse 1.2s ease-in-out infinite;
+    }
+    .pipe-node.paused .pn-name  { color: var(--orange); }
+    .pipe-node.paused .pn-state { color: var(--orange); }
+    @keyframes gatePulse { 0%,100%{box-shadow:0 0 0 2px #d2992244;} 50%{box-shadow:0 0 0 5px #d2992211;} }
+
+    .pipe-node.skipped { opacity: 0.15; }
+
+    .pipe-arrow-icon {
+      color: var(--border); font-size: 13px; flex-shrink: 0;
+      transition: color 0.25s;
+    }
+    .pipe-arrow-icon.lit { color: var(--text-muted); }
+    .pipe-arrow-icon.active { color: var(--blue); }
+    .pipe-arrow-icon.done-arrow { color: var(--green); }
+
+    /* ══════════════════════════════════════
+       RESULT CARDS (output panel)
+       ══════════════════════════════════════ */
+
+    /* Route callout */
+    .route-callout {
+      border-radius: var(--radius); padding: 12px 14px;
+      margin-bottom: 14px; font-size: 12px; line-height: 1.6;
+    }
+    .route-callout.knowledge {
+      background: var(--blue-dim); border: 1px solid #1f4080;
+    }
+    .route-callout.action {
+      background: var(--orange-dim); border: 1px solid #5a3a00;
+    }
+    .route-callout.escalated {
+      background: var(--red-dim); border: 1px solid #6b2020;
+    }
+    .route-callout-title {
+      font-weight: 700; margin-bottom: 3px; text-transform: uppercase;
+      font-size: 11px; letter-spacing: 0.05em;
+    }
+    .route-callout.knowledge .route-callout-title { color: var(--blue); }
+    .route-callout.action    .route-callout-title { color: var(--orange); }
+    .route-callout.escalated .route-callout-title { color: var(--red); }
+    .route-callout-body { color: var(--text-muted); }
+
+    /* Status badge */
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .status-completed  { background: var(--green-dim);  color: var(--green);  border: 1px solid #1a4a2e; }
+    .status-pending    { background: var(--orange-dim); color: var(--orange); border: 1px solid #5a3a00; }
+    .status-escalated  { background: var(--red-dim);    color: var(--red);    border: 1px solid #6b2020; }
+
+    .thread-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; color: var(--text-muted);
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 4px; padding: 2px 8px; font-family: var(--mono);
+    }
+
+    /* Answer block */
+    .answer-block {
+      margin-top: 14px; padding: 14px; background: var(--surface-2);
+      border-radius: var(--radius); border-left: 3px solid var(--green);
+    }
+    .answer-block-label {
+      font-size: 11px; font-weight: 700; color: var(--green);
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px;
+    }
+    .answer-text {
+      font-family: inherit; font-size: 13px; line-height: 1.7;
+      color: var(--text); white-space: pre-wrap;
+    }
+
+    /* Proposed action card */
+    .action-card {
+      margin-top: 14px; padding: 14px; background: var(--surface-2);
+      border-radius: var(--radius); border-left: 3px solid var(--orange);
+    }
+    .action-card-label {
+      font-size: 11px; font-weight: 700; color: var(--orange);
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;
+    }
+    .action-tool-name {
+      font-family: var(--mono); font-size: 14px; font-weight: 700;
+      color: var(--orange); margin-bottom: 8px;
+    }
+    .action-args {
+      font-family: var(--mono); font-size: 12px; color: var(--text-muted);
+      background: var(--surface); border-radius: 4px; padding: 8px 10px;
+      white-space: pre-wrap;
+    }
+    .action-why {
+      margin-top: 10px; font-size: 11px; color: var(--text-muted);
+      line-height: 1.5; padding: 8px; background: var(--surface);
+      border-radius: 4px;
+    }
+
+    /* Citations */
+    .citations-section { margin-top: 12px; }
+    .citations-label {
+      font-size: 11px; font-weight: 700; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+    }
+    .citation-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 8px; border-radius: 4px; background: var(--surface-2);
+      margin-bottom: 4px;
+    }
+    .citation-idx {
+      font-size: 10px; font-weight: 700; color: var(--blue);
+      background: var(--blue-dim); padding: 1px 6px; border-radius: 3px;
+      flex-shrink: 0; font-family: var(--mono);
+    }
+    .citation-src { font-size: 12px; color: var(--text-muted); font-family: var(--mono); }
+
+    /* ══════════════════════════════════════════════════════════════
+       WEEK-SPECIFIC END
+       ══════════════════════════════════════════════════════════════ */
+  </style>
+</head>
+<body>
+
+<!-- ── CORE: Header ─────────────────────────────────────────────── -->
+<header>
+  <div class="header-title">
+    <div class="logo">🤖</div>
+    Applied GenAI &amp; Agentic AI Engineering Program
+    <span class="week-badge">Week 10</span>
+    <span class="header-sub">- TriageFlow</span>
+  </div>
+  <div class="header-actions">
+    <button class="btn-ghost" onclick="window.open('http://localhost:8000/readme','_blank')">📖 README</button>
+    <div id="health-chip" onclick="checkHealth()" title="Click to re-check">
+      <span class="dot"></span>
+      <span id="health-text">Checking…</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── Main layout ──────────────────────────────────────────────── -->
+<main>
+
+  <!-- ══════════════════════════════════
+       LEFT PANEL
+       ══════════════════════════════════ -->
+  <div class="left-panel">
+
+    <!-- STEP 1: Input -->
+    <div class="panel-section">
+      <div class="step-header">
+        <div class="step-num active" id="step1-num">1</div>
+        <div>
+          <div class="step-title">Send an Incident Request</div>
+          <div class="step-desc">Triage routes it: Knowledge, Action, or Escalate</div>
+        </div>
+      </div>
+
+      <label style="margin-bottom:5px">Incident / Question</label>
+      <textarea id="notes" placeholder="e.g. How do I restart the payments API?&#10;or: Please restart payments-api now"></textarea>
+
+      <div style="margin-top:10px">
+        <label style="margin-bottom:5px">User ID</label>
+        <!-- u_1 is the seeded demo user: prior incidents and procedural rules
+             both exist for this id. Any other id gives an empty memory panel,
+             which looks like a bug and is not one. -->
+        <input type="text" id="user-id" value="u_1" placeholder="u_1">
+      </div>
+    </div>
+
+    <!-- Scenario quick-fill -->
+    <div class="panel-section">
+      <label>Try a scenario</label>
+      <div class="demo-pills">
+        <button class="pill" onclick="fillScenario('knowledge')" title="Routes to Knowledge Agent → answer + citations">📚 Knowledge</button>
+        <button class="pill" onclick="fillScenario('action')"    title="Routes to Action Agent → pauses for approval">⚡ Action</button>
+        <button class="pill" onclick="fillScenario('escalate')"  title="Escalates to a human - no AI action taken">🚨 Escalate</button>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:var(--text-muted);line-height:1.5">
+        📚 = asks <em>how</em> to do something &nbsp;·&nbsp;
+        ⚡ = asks the system <em>to do</em> something &nbsp;·&nbsp;
+        🚨 = sensitive situation
+      </div>
+    </div>
+
+    <!-- STEP 2: Approval gate (hidden until pending_approval) -->
+    <div class="panel-section approval-gate-section" id="approval-gate-section">
+      <div class="step-header">
+        <div class="step-num waiting" id="step2-num">2</div>
+        <div>
+          <div class="step-title">Human Approval Required</div>
+          <div class="step-desc">LangGraph paused - nothing has run yet</div>
+        </div>
+      </div>
+
+      <div class="gate-explain">
+        The Action agent proposed a tool call, and <code>risky()</code> said this one needs a
+        human. The graph is <strong>frozen</strong> inside the <code>action_execute</code> node,
+        above its single mutating call. Approve to run it, or Reject to cancel.
+        This is LangGraph's dynamic <code>interrupt()</code> in action: a low-risk proposal
+        would have run straight through without stopping here.
+      </div>
+
+      <label>Reviewer ID</label>
+      <input type="text" id="reviewer-id" value="ops_lead" placeholder="ops_lead" style="margin-bottom:12px">
+      <div style="display:flex; gap:8px">
+        <button class="btn-approve" id="btn-approve" onclick="doApprove(true)">
+          <span id="spin-a" class="spinner"></span> ✓ Approve &amp; Run
+        </button>
+        <button class="btn-reject" id="btn-reject" onclick="doApprove(false)">
+          <span id="spin-r" class="spinner"></span> ✗ Reject
+        </button>
+      </div>
+    </div>
+
+    <!-- Action buttons -->
+    <div class="action-btns">
+      <button class="btn-primary" id="btn-main" onclick="doMain()">
+        <span id="spin-m" class="spinner"></span>
+        ▶ &nbsp;Send to Triage
+      </button>
+      <button class="btn-secondary" onclick="resetAll()">
+        ↺ &nbsp;Reset
+      </button>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════
+       RIGHT PANEL
+       ══════════════════════════════════ -->
+  <div class="right-panel">
+
+    <!-- WEEK-SPECIFIC: Pipeline visualizer -->
+    <div class="pipeline-section">
+      <div class="pipeline-label">
+        Agent Pipeline
+        <span id="pipeline-route-badge" style="display:none;font-size:11px;padding:2px 10px;border-radius:20px;font-weight:700"></span>
+      </div>
+      <div class="pc-flow">
+
+        <!-- Triage -->
+        <div class="pc-card idle" id="pcc-triage">
+          <div class="pc-card-row">
+            <span class="pc-card-icon">🔀</span>
+            <div class="pc-card-body">
+              <div class="pc-card-name">Triage</div>
+              <div class="pc-card-sub">gpt-5.4-nano</div>
+            </div>
+            <div class="pn-state">classifier</div>
+          </div>
+          <div class="pc-decided" id="pcd-triage"></div>
+        </div>
+
+        <div class="pc-divider"><span class="pc-divider-label">route</span></div>
+
+        <!-- Route box: Knowledge -->
+        <div class="pc-route-box" id="pcbox-k">
+          <div class="pc-route-label">📚 Knowledge</div>
+          <div class="pc-card idle" id="pcc-knowledge">
+            <div class="pc-card-row">
+              <span class="pc-card-icon">📚</span>
+              <div class="pc-card-body">
+                <div class="pc-card-name">Knowledge</div>
+                <div class="pc-card-sub">gpt-5.4-mini</div>
+              </div>
+              <div class="pn-state">search</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Route box: Action -->
+        <div class="pc-route-box" id="pcbox-a">
+          <div class="pc-route-label">⚡ Action</div>
+          <div class="pc-card idle" id="pcc-action">
+            <div class="pc-card-row">
+              <span class="pc-card-icon">⚡</span>
+              <div class="pc-card-body">
+                <div class="pc-card-name">Action</div>
+                <div class="pc-card-sub">gpt-5.4-mini</div>
+              </div>
+              <div class="pn-state">plan tool</div>
+            </div>
+          </div>
+          <div class="pc-step-arrow" id="pvaa1">↓</div>
+          <div class="pc-card idle" id="pcc-gate">
+            <div class="pc-card-row">
+              <span class="pc-card-icon">⏸</span>
+              <div class="pc-card-body">
+                <div class="pc-card-name">Human Gate</div>
+                <div class="pc-card-sub">interrupt() if risky()</div>
+              </div>
+              <div class="pn-state">you decide</div>
+            </div>
+          </div>
+          <div class="pc-step-arrow" id="pvaa2">↓</div>
+          <div class="pc-card idle" id="pcc-execute">
+            <div class="pc-card-row">
+              <span class="pc-card-icon">🔧</span>
+              <div class="pc-card-body">
+                <div class="pc-card-name">Execute</div>
+                <div class="pc-card-sub">run tool</div>
+              </div>
+              <div class="pn-state">run tool</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Route box: Escalate -->
+        <div class="pc-route-box" id="pcbox-e">
+          <div class="pc-route-label">🚨 Escalate</div>
+          <div class="pc-card idle" id="pcc-escalate">
+            <div class="pc-card-row">
+              <span class="pc-card-icon">🚨</span>
+              <div class="pc-card-body">
+                <div class="pc-card-name">Escalate</div>
+                <div class="pc-card-sub">human review</div>
+              </div>
+              <div class="pn-state">human review</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pc-divider"><span class="pc-divider-label">output</span></div>
+
+        <!-- Output -->
+        <div class="pc-card idle" id="pcc-output">
+          <div class="pc-card-row">
+            <span class="pc-card-icon">✅</span>
+            <div class="pc-card-body">
+              <div class="pc-card-name">Output</div>
+              <div class="pc-card-sub"></div>
+            </div>
+            <div class="pn-state"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Output + Logs (80% right content area) -->
+    <div class="right-content">
+
+      <div class="pane pane-output">
+        <div class="pane-header">
+          Output
+          <div style="display:flex;gap:8px;align-items:center">
+            <span id="output-tag" style="font-size:11px;color:var(--text-muted)"></span>
+            <button class="btn-ghost" style="padding:3px 10px;font-size:11px;display:none" id="btn-format" onclick="toggleFormat()">{ } Raw JSON</button>
+            <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearOutput()">✕ Clear</button>
+          </div>
+        </div>
+        <div class="pane-body" id="output-body">
+          <span class="placeholder-msg">Send an incident request to see what happens…</span>
+        </div>
+      </div>
+
+      <div class="pane pane-logs">
+        <div class="pane-header">
+          Request Trace
+          <button class="btn-ghost" style="padding:3px 10px;font-size:11px" onclick="clearLogs()">✕ Clear</button>
+        </div>
+        <div class="pane-body" id="logs-body">
+          <span class="placeholder-msg">API calls and events appear here…</span>
+        </div>
+      </div>
+
+    </div><!-- /.right-content -->
+
+  </div>
+</main>
+
+<script>
+  /* ══════════════════════════════════════════════════════════════════
+     CORE - DO NOT EDIT
+     ════════════════════════════════════════════════════════════════ */
+
+  const API = window.location.origin;  // works on any port you serve it from
+
+  let _rawOutputText = '';
+  let _isFormatted   = false;
+
+  function _fmtDetail(detail, fallback) {
+    if (!detail) return fallback || 'Unknown error';
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail))
+      return detail.map(d => d.msg || JSON.stringify(d)).join(' | ');
+    return JSON.stringify(detail);
+  }
+
+  function _showFormatBtn(show) {
+    document.getElementById('btn-format').style.display = show ? '' : 'none';
+    _isFormatted = false;
+    document.getElementById('btn-format').textContent = '{ } Raw JSON';
+  }
+
+  function toggleFormat() {
+    const body = document.getElementById('output-body');
+    const btn  = document.getElementById('btn-format');
+    if (!_isFormatted) {
+      try {
+        const saved = body.innerHTML;
+        body._savedHTML = saved;
+        body.innerHTML = `<pre>${highlightJSON(JSON.parse(_rawOutputText))}</pre>`;
+        _isFormatted = true; btn.textContent = '≡ Cards';
+      } catch { addLog('warn', 'Could not parse output as JSON.'); }
+    } else {
+      body.innerHTML = body._savedHTML || '';
+      _isFormatted = false; btn.textContent = '{ } Raw JSON';
+    }
+  }
+
+  function clearOutput() {
+    document.getElementById('output-body').innerHTML =
+      '<span class="placeholder-msg">Send an incident request to see what happens…</span>';
+    document.getElementById('output-tag').textContent = '';
+    _rawOutputText = ''; _showFormatBtn(false);
+  }
+
+  function clearLogs() {
+    document.getElementById('logs-body').innerHTML =
+      '<span class="placeholder-msg">API calls and events appear here…</span>';
+  }
+
+  function addLog(level, msg) {
+    const body = document.getElementById('logs-body');
+    const ph   = body.querySelector('.placeholder-msg');
+    if (ph) ph.remove();
+    const now = new Date().toLocaleTimeString('en-GB', {hour12: false});
+    const div = document.createElement('div');
+    div.className = `log-entry log-${level}`;
+    div.innerHTML =
+      `<span class="log-ts">${now}</span>` +
+      `<span class="log-level">${level.toUpperCase()}</span>` +
+      `<span class="log-msg">${escHtml(msg)}</span>`;
+    body.appendChild(div);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  // Fetch Redis session and fill the placeholder div rendered by _renderResult
+  async function _fetchAndShowRedis(threadId) {
+    const userId = (document.getElementById('user-id')?.value || '').trim();
+    try {
+      // The session bundle belongs to the thread's owner, so the owner asks for
+      // it. After an approval the reviewer is a different person, and a reviewer
+      // asking gets a 404 - which is the correct answer, not a bug.
+      const r = await fetch(`${API}/session/${threadId}`, {headers: {'X-User-Id': userId}});
+      if (!r.ok) return;
+      const data = await r.json();
+      const events = data.events || [];
+      const userEvents = data.user_events || [];
+      const uid = escHtml(data.user_id || userId);
+
+      const renderEvents = (arr) => arr.length === 0
+        ? `<div class="redis-empty">Empty - Redis may be offline or no events written yet.</div>`
+        : arr.map((ev, i) => `<div class="redis-event"><span class="redis-idx">${i}</span><pre class="redis-json">${highlightJSON(ev)}</pre></div>`).join('');
+
+      const inner = `
+        <div class="redis-section">
+          <div class="redis-header">
+            <span class="redis-header-label">🗄 Redis Memory</span>
+            <span style="font-size:11px;color:var(--text-muted);font-family:var(--mono)">session ${escHtml(threadId)}</span>
+          </div>
+          <div class="redis-key">user:${uid}:memory &middot; ${userEvents.length} event${userEvents.length !== 1 ? 's' : ''} across all sessions</div>
+          ${renderEvents(userEvents)}
+          <div class="redis-key" style="margin-top:10px">session:${uid}:${escHtml(threadId)} &middot; ${events.length} event${events.length !== 1 ? 's' : ''} this session</div>
+          ${renderEvents(events)}
+        </div>
+      `;
+
+      // Fill the placeholder injected by _renderResult - always visible without scrolling
+      const placeholder = document.getElementById('redis-placeholder');
+      if (placeholder) placeholder.innerHTML = inner;
+      addLog('info', `Redis user:${uid}:memory ${userEvents.length} · session ${escHtml(threadId)} ${events.length} event(s)`);
+    } catch {
+      // Redis is optional; silently skip if /session endpoint unreachable
+    }
+  }
+
+  function highlightJSON(obj) {
+    const str = JSON.stringify(obj, null, 2);
+    return escHtml(str).replace(
+      /(&quot;(?:\\u[0-9a-fA-F]{4}|\\[^u]|[^\\&])*&quot;(?:\s*:)?|\b(?:true|false)\b|\bnull\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+      match => {
+        let c = 'n';
+        if (match.startsWith('&quot;'))
+          c = match.endsWith(':') ? 'k' : 's';
+        else if (match === 'true' || match === 'false') c = 'b';
+        else if (match === 'null') c = 'null';
+        return `<span class="j-${c}">${match}</span>`;
+      }
+    );
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function setLoading(active) {
+    document.querySelectorAll('.action-btns button').forEach(b => b.disabled = active);
+    document.querySelectorAll('.spinner').forEach(s => s.classList.toggle('active', active));
+    ['btn-approve','btn-reject'].forEach(id => {
+      const b = document.getElementById(id);
+      if (b) b.disabled = active;
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     WEEK-SPECIFIC START
+     ════════════════════════════════════════════════════════════════ */
+
+  const DEMO_NOTES = 'How do I restart the payments API?';
+
+  const DEMO = {
+    knowledge: 'How do I restart the payments API?',
+    action:    'Please restart payments-api now',
+    escalate:  'A billing customer is threatening legal action - what do I do?'
+  };
+
+  const ROUTE_META = {
+    knowledge: {
+      label: '📚 Knowledge Route',
+      cls: 'knowledge',
+      explain: 'The Triage agent classified this as a <strong>how-to question</strong>. It goes to the Knowledge Agent, which searches the runbooks and composes a cited answer. No infrastructure is touched.'
+    },
+    action: {
+      label: '⚡ Action Route',
+      cls: 'action',
+      explain: 'The Triage agent classified this as an <strong>imperative action</strong>. The Action agent planned a tool call. Execution is <strong>paused</strong> at the human gate - nothing has run yet.'
+    },
+    pending_approval: {
+      label: '⏸ Awaiting Approval',
+      cls: 'action',
+      explain: 'A dynamic <code>interrupt()</code> inside <code>action_execute</code> froze the graph here, because <code>risky()</code> returned true for this proposal. The proposed tool call is shown below. Approve to execute it, Reject to cancel.'
+    },
+    action_approved: {
+      label: '⚡ Action Route - Approved and Executed',
+      cls: 'action',
+      explain: 'A human approved the proposed tool call and the graph resumed. Note what re-executed: everything above the pause in <code>action_execute</code> ran a second time, which is why the only mutating call sits below it and carries an idempotency key.'
+    },
+    action_completed: {
+      label: '⚡ Action Route - Executed',
+      cls: 'action',
+      explain: 'The Triage agent classified this as an <strong>imperative action</strong>, and <code>risky()</code> judged the proposed tool low-risk, so the graph executed it without waking anybody. The gate is conditional by design: pausing for every action is how an approval queue becomes noise people click through.'
+    },
+    escalate_human: {
+      label: '🚨 Escalated to Human',
+      cls: 'escalated',
+      explain: 'The Triage agent determined this situation requires a human, not an AI response. No runbook lookup or tool call is made.'
+    },
+    completed: {
+      label: '✅ Completed',
+      cls: 'knowledge',
+      explain: 'The request completed without requiring human approval.'
+    }
+  };
+
+  let _pendingThreadId = null;
+  let _lastTriageCalls = [];
+
+  // ── Pipeline state machine ──────────────────────────────────────
+
+  function _setNode(id, state) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('idle','running','done','paused','skipped');
+    el.classList.add(state);
+    const stateEl = el.querySelector('.pn-state');
+    if (stateEl) {
+      const labels = { running:'running…', done:'done ✓', paused:'⏸ waiting', skipped:'-', idle:'' };
+      stateEl.textContent = labels[state] || el.querySelector('.pn-state')?.dataset?.default || '';
+    }
+  }
+
+  function _setArrow(id, cls) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const base = el.classList.contains('pc-step-arrow') ? 'pc-step-arrow'
+               : el.classList.contains('pv3-down-arrow') ? 'pv3-down-arrow'
+               : el.classList.contains('pv3-arrow') ? 'pv3-arrow'
+               : 'pipe-arrow-icon';
+    el.className = base;
+    if (cls) el.classList.add(cls);
+  }
+
+  function _resetPipeline() {
+    ['pcc-triage','pcc-knowledge','pcc-action','pcc-gate','pcc-execute','pcc-escalate','pcc-output']
+      .forEach(id => _setNode(id, 'idle'));
+    ['pvaa1','pvaa2'].forEach(id => _setArrow(id, null));
+    const badge = document.getElementById('pipeline-route-badge');
+    if (badge) badge.style.display = 'none';
+    const decided = document.getElementById('pcd-triage');
+    if (decided) { decided.style.display = 'none'; decided.textContent = ''; }
+    const defaults = {
+      'pcc-triage':'classifier', 'pcc-knowledge':'search',
+      'pcc-action':'plan tool', 'pcc-gate':'you decide',
+      'pcc-execute':'run tool', 'pcc-escalate':'human review', 'pcc-output':'',
+    };
+    Object.entries(defaults).forEach(([id, txt]) => {
+      const el = document.getElementById(id);
+      const st = el && el.querySelector('.pn-state');
+      if (st) st.textContent = txt;
+    });
+  }
+
+  function _setPipelineRunning(route) {
+    _resetPipeline();
+    _setNode('pcc-triage', 'running');
+    if (route === 'knowledge') {
+      ['pcc-action','pcc-gate','pcc-execute','pcc-escalate'].forEach(id => _setNode(id,'skipped'));
+    } else if (route === 'action') {
+      ['pcc-knowledge','pcc-escalate'].forEach(id => _setNode(id,'skipped'));
+    } else if (route === 'escalate') {
+      ['pcc-knowledge','pcc-action','pcc-gate','pcc-execute'].forEach(id => _setNode(id,'skipped'));
+    }
+  }
+
+  function _setPipelineDone(data) {
+    _resetPipeline();
+    const badge = document.getElementById('pipeline-route-badge');
+    const B = 'display:inline-block;font-size:11px;padding:2px 10px;border-radius:20px;font-weight:700;';
+    const setBadge = (extra, text) => { badge.style.cssText = B + extra; badge.textContent = text; };
+
+    if (data._wasAction) {
+      _setNode('pcc-triage','done');
+      _setNode('pcc-action','done'); _setArrow('pvaa1','done');
+      _setNode('pcc-gate','done');   _setArrow('pvaa2','done');
+      _setNode('pcc-execute','done'); _setNode('pcc-output','done');
+      ['pcc-knowledge','pcc-escalate'].forEach(id => _setNode(id,'skipped'));
+      setBadge('background:var(--green-dim);color:var(--green);border:1px solid #1a4a2e','✅ Action Complete');
+
+    } else if (data.status === 'pending_approval') {
+      _setNode('pcc-triage','done');
+      _setNode('pcc-action','done'); _setArrow('pvaa1','done');
+      _setNode('pcc-gate','paused');
+      ['pcc-knowledge','pcc-escalate','pcc-execute'].forEach(id => _setNode(id,'skipped'));
+      setBadge('background:var(--orange-dim);color:var(--orange);border:1px solid #5a3a00','⏸ Paused at Gate');
+
+    } else if (data.status === 'escalated') {
+      _setNode('pcc-triage','done');
+      _setNode('pcc-escalate','done'); _setNode('pcc-output','done');
+      ['pcc-knowledge','pcc-action','pcc-gate','pcc-execute'].forEach(id => _setNode(id,'skipped'));
+      setBadge('background:var(--red-dim);color:var(--red);border:1px solid #6b2020','🚨 Escalated');
+
+    } else {
+      _setNode('pcc-triage','done');
+      _setNode('pcc-knowledge','done'); _setNode('pcc-output','done');
+      ['pcc-action','pcc-gate','pcc-execute','pcc-escalate'].forEach(id => _setNode(id,'skipped'));
+      setBadge('background:var(--blue-dim);color:var(--blue);border:1px solid #1f4080','📚 Knowledge Route');
+    }
+  }
+
+  // ── Health check ────────────────────────────────────────────────
+
+  async function checkHealth() {
+    const chip = document.getElementById('health-chip');
+    const txt  = document.getElementById('health-text');
+    chip.className = ''; txt.textContent = 'Checking…';
+    try {
+      const r    = await fetch(`${API}/health`);
+      const data = await r.json();
+      chip.className  = 'online';
+      txt.textContent = `Online · ${escHtml(data.model || 'unknown')}`;
+      const models = data.models || {};
+      const detail = Object.entries(models).map(([k,v]) => `${k}: ${escHtml(v)}`).join(' | ');
+      addLog('success', `Server online - ${detail || escHtml(data.model)}`);
+    } catch (e) {
+      chip.className  = 'offline';
+      txt.textContent = 'Offline';
+      addLog('error', `Server offline - start uvicorn first. (${e.message})`);
+    }
+  }
+
+  // ── Scenario fill ────────────────────────────────────────────────
+
+  function fillDemo() {
+    document.getElementById('notes').value = DEMO_NOTES;
+    addLog('info', 'Demo input loaded.');
+  }
+
+  function fillScenario(type) {
+    document.getElementById('notes').value = DEMO[type] || DEMO.knowledge;
+    const hints = {
+      knowledge: 'This is a how-to question → will route to Knowledge Agent',
+      action:    'This is an imperative command → will route to Action Agent + pause at gate',
+      escalate:  'Sensitive situation → Triage will escalate to human'
+    };
+    addLog('info', hints[type] || `Scenario loaded: ${type}`);
+  }
+
+  // ── Approval gate ────────────────────────────────────────────────
+
+  function _showApprovalGate(show) {
+    document.getElementById('approval-gate-section').style.display = show ? 'block' : 'none';
+    document.getElementById('btn-main').disabled = show;
+  }
+
+  // ── Reset ────────────────────────────────────────────────────────
+
+  function resetAll() {
+    _pendingThreadId = null;
+    _showApprovalGate(false);
+    clearOutput();
+    clearLogs();
+    _resetPipeline();
+    document.getElementById('notes').value = '';
+    document.getElementById('step1-num').className = 'step-num active';
+    addLog('info', 'Reset - ready for next request.');
+  }
+
+  // ── Render result ────────────────────────────────────────────────
+
+  function _renderResult(data, routeHint) {
+    const statusClass = {
+      completed:        'status-completed',
+      pending_approval: 'status-pending',
+      escalated:        'status-escalated',
+    }[data.status] || 'status-completed';
+
+    const statusLabel = {
+      completed:        '✅ Completed',
+      pending_approval: '⏸ Pending Approval',
+      escalated:        '🚨 Escalated',
+    }[data.status] || data.status;
+
+    let calloutKey = data.status === 'pending_approval' ? 'action' : (routeHint || data.status);
+    if (data.status === 'escalated') calloutKey = 'escalate_human';
+    // An action that completed did NOT pause, and the 'action' copy says it did.
+    if (data.status === 'completed' && routeHint === 'action')
+      calloutKey = data._viaApproval ? 'action_approved' : 'action_completed';
+    const meta = ROUTE_META[calloutKey] || ROUTE_META.completed;
+
+    let html = `
+      <div class="route-callout ${meta.cls}">
+        <div class="route-callout-title">${meta.label}</div>
+        <div class="route-callout-body">${meta.explain}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+        <span class="status-badge ${statusClass}">${escHtml(statusLabel)}</span>
+        <span class="thread-chip">🧵 ${escHtml(data.thread_id || '')}</span>
+      </div>
+    `;
+
+    // ── LLM Calls (collapsible <details> per call) ──
+    const calls = data.llm_calls || [];
+    if (calls.length > 0) {
+      const stepCls = { triage: 'llm-step-triage', knowledge: 'llm-step-knowledge', action: 'llm-step-action' };
+      html += `<div class="llm-calls-section">`;
+      calls.forEach(c => {
+        const cls = stepCls[c.step] || 'llm-step-triage';
+        html += `
+          <details class="llm-call">
+            <summary>
+              <span class="llm-caret">▶</span>
+              <span class="llm-step-label ${cls}">${escHtml(c.step)}</span>
+              <span class="llm-model-chip">${escHtml(c.model || '')}</span>
+              <span class="llm-meta">${c.latency_ms || 0} ms &nbsp;·&nbsp; ↑${c.tokens_in || 0} ↓${c.tokens_out || 0} tok</span>
+            </summary>
+            <div class="llm-call-body">
+              <div>
+                <div class="llm-field-label">System prompt</div>
+                <div class="llm-field-pre">${escHtml(c.system || '')}</div>
+              </div>
+              <div>
+                <div class="llm-field-label">User message</div>
+                <div class="llm-field-pre">${escHtml(c.user || '')}</div>
+              </div>
+              <div>
+                <div class="llm-field-label">Model response</div>
+                <div class="llm-response-pre">${escHtml(c.response || '')}</div>
+              </div>
+            </div>
+          </details>`;
+      });
+      html += `</div>`;
+    }
+
+    // ── Redis placeholder (filled by _fetchAndShowRedis after render) ──
+    html += `<div id="redis-placeholder"></div>`;
+
+    // ── Proposed action card ──
+    if (data.status === 'pending_approval' && data.proposed_action) {
+      const p = data.proposed_action;
+      html += `
+        <div class="action-card">
+          <div class="action-card-label">⏸ Proposed Tool Call - not yet executed</div>
+          <div class="action-tool-name">${escHtml(p.tool_name || 'unknown')}</div>
+          <div class="action-args">${escHtml(JSON.stringify(p.arguments || {}, null, 2))}</div>
+          <div class="action-why">
+            💡 The Action agent selected this tool from the registry.
+            Nothing runs until you click <strong>Approve</strong> in the left panel.
+          </div>
+        </div>
+      `;
+    }
+
+    // ── Final answer ──
+    if (data.final_answer) {
+      html += `
+        <div class="answer-block">
+          <div class="answer-block-label">Answer</div>
+          <div class="answer-text">${escHtml(data.final_answer)}</div>
+        </div>
+      `;
+    }
+
+    // ── Citations ──
+    if (data.citations && data.citations.length > 0) {
+      html += `<div class="citations-section"><div class="citations-label">Sources (Runbooks)</div>`;
+      for (const c of data.citations) {
+        html += `
+          <div class="citation-item">
+            <span class="citation-idx">doc:${c.doc_index}</span>
+            <span class="citation-src">${escHtml(c.source || '')}</span>
+          </div>
+        `;
+      }
+      html += `</div>`;
+    }
+
+    document.getElementById('output-body').innerHTML = html;
+    _rawOutputText = JSON.stringify(data, null, 2);
+    _showFormatBtn(true);
+  }
+
+  // ── POST /triage ─────────────────────────────────────────────────
+
+  async function doMain() {
+    const req = document.getElementById('notes').value.trim();
+    const uid = document.getElementById('user-id').value.trim();
+    if (!req) { addLog('warn', 'Please enter an incident request.'); return; }
+    if (!uid) { addLog('warn', 'User ID is required.'); return; }
+
+    const triagePayload = { user_request: req, user_id: uid };
+    clearOutput(); setLoading(true);
+    _setPipelineRunning(null);
+    document.getElementById('output-tag').textContent = 'POST /triage';
+    addLog('info', '→ POST /triage');
+    addLog('info', 'Triage agent classifying with gpt-5.4-nano…');
+
+    try {
+      const r = await fetch(`${API}/triage`, {
+        method: 'POST',
+        // X-User-Id stands in for a verified bearer token. The server refuses a
+        // user_id in the body that does not match it, because a body field the
+        // caller sets is not an identity.
+        headers: {'Content-Type': 'application/json', 'X-User-Id': uid},
+        body: JSON.stringify(triagePayload),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+
+      // The server reports the route. Inferring it from the status was only
+      // ever right while every action paused; a low-risk action now completes.
+      _lastTriageCalls = data.llm_calls || [];
+      const routeHint = data.route || ((data.status === 'completed') ? 'knowledge' : null);
+      data._wasAction = (data.route === 'action' && data.status === 'completed');
+      data._route = routeHint;
+      _setPipelineDone(data);
+      _renderResult(data, routeHint);
+      await _fetchAndShowRedis(data.thread_id);
+
+      if (data.status === 'pending_approval') {
+        _pendingThreadId = data.thread_id;
+        _showApprovalGate(true);
+        document.getElementById('step1-num').className = 'step-num done';
+        addLog('warn', `Graph paused at action_execute - thread: ${data.thread_id}`);
+        addLog('info', `Proposed: ${data.proposed_action?.tool_name} - approve or reject in left panel`);
+      } else {
+        _pendingThreadId = null;
+        _showApprovalGate(false);
+        addLog('success', `← ${data.status}  thread: ${data.thread_id}`);
+      }
+    } catch (e) {
+      _resetPipeline();
+      document.getElementById('output-body').innerHTML =
+        `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── POST /approve ─────────────────────────────────────────────────
+
+  async function doApprove(approved) {
+    if (!_pendingThreadId) { addLog('warn', 'No thread is pending approval.'); return; }
+    const reviewerId = (document.getElementById('reviewer-id').value.trim()) || 'ops_lead';
+    const approvePayload = { thread_id: _pendingThreadId, approved, reviewer_id: reviewerId };
+
+    setLoading(true);
+    _setNode('pcc-gate', 'done'); _setArrow('pvaa2', 'done');
+    _setNode('pcc-execute', approved ? 'running' : 'skipped');
+    document.getElementById('output-tag').textContent = 'POST /approve';
+    addLog('info', `→ POST /approve  approved=${approved}  reviewer=${reviewerId}`);
+
+    try {
+      const r = await fetch(`${API}/approve`, {
+        method: 'POST',
+        // The APPROVER calls this one, and the server checks the role rather
+        // than trusting reviewer_id in the body.
+        headers: {'Content-Type': 'application/json', 'X-User-Id': reviewerId},
+        body: JSON.stringify(approvePayload),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(_fmtDetail(data.detail, r.statusText));
+
+      data._wasAction = true;
+      data._viaApproval = true;   // executed because a human said so, not because risky() said no
+      // The approve response carries no llm_calls on purpose: the approver is
+      // not the data subject. This panel keeps the log the REQUESTER already
+      // received from its own /triage response.
+      data.llm_calls = _lastTriageCalls;
+      _setPipelineDone(data);
+      _renderResult(data, 'action');
+      await _fetchAndShowRedis(data.thread_id);
+      _pendingThreadId = null;
+      _showApprovalGate(false);
+      document.getElementById('step1-num').className = 'step-num active';
+      addLog('success', approved ? '← Action approved and executed.' : '← Action rejected by reviewer.');
+    } catch (e) {
+      document.getElementById('output-body').innerHTML =
+        `<div class="error-box">${escHtml(e.message)}</div>`;
+      addLog('error', e.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════════════
+     Init
+     ════════════════════════════════════════════════════════════════ */
+  checkHealth();
+</script>
+</body>
+</html>

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<!--
+  Applied GenAI & Agentic AI Engineering - Week 10: DeskOrchestrator
+  =================================================================
+
+  Deliberately smaller than TriageFlow's UI, and the difference is the point.
+  TriageFlow is a system you read; this is a system you MEASURE, so this page
+  has one thing TriageFlow's does not: a retrieval inspector.
+
+  Nothing on this page is graded. It exists so that a recall failure stops
+  being an empty panel and becomes two numbers that disagree with each other.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Applied GenAI &amp; Agentic AI Engineering - Week 10 &middot; DeskOrchestrator</title>
+  <link rel="icon" href="data:image/svg+xml,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'&gt;&lt;rect width='16' height='16' rx='4' fill='%231a56db'/&gt;&lt;/svg&gt;" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:#0d1117; --surface:#161b22; --surface-2:#21262d; --surface-3:#2d333b;
+      --border:#30363d; --text:#e6edf3; --text-muted:#7d8590;
+      --blue:#58a6ff; --blue-dim:#1f3a5f;
+      --green:#3fb950; --green-dim:#1a3a28;
+      --red:#f85149; --red-dim:#3d1a1a;
+      --orange:#d29922; --orange-dim:#3d2f0a;
+      --radius:8px; --mono:'Fira Code','Cascadia Code','Consolas',monospace;
+    }
+    html, body { height:100%; }
+    body {
+      background:var(--bg); color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      font-size:14px; display:flex; flex-direction:column; height:100vh; overflow:hidden;
+    }
+    header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:0 20px; height:52px; background:var(--surface);
+      border-bottom:1px solid var(--border); flex-shrink:0;
+    }
+    .header-title { display:flex; align-items:center; gap:10px; font-size:15px; font-weight:600; }
+    .header-title .logo {
+      width:28px; height:28px; background:linear-gradient(135deg,#1a56db,#7e3af2);
+      border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:15px;
+    }
+    .week-badge {
+      background:var(--blue-dim); color:var(--blue); font-size:11px; font-weight:600;
+      padding:2px 8px; border-radius:20px; border:1px solid #1f4080;
+    }
+    button {
+      cursor:pointer; border:none; border-radius:var(--radius); font-size:13px; font-weight:500;
+      transition:opacity .15s, transform .1s; display:inline-flex; align-items:center; gap:6px;
+    }
+    button:active { transform:scale(.97); }
+    button:disabled { opacity:.45; cursor:not-allowed; transform:none; }
+    .btn-primary { background:#1a56db; color:#fff; padding:8px 16px; }
+    .btn-primary:hover:not(:disabled) { background:#1d4ed8; }
+    .btn-secondary { background:var(--surface-2); color:var(--text); border:1px solid var(--border); padding:8px 16px; }
+    .btn-secondary:hover:not(:disabled) { background:var(--surface-3); }
+    .btn-demo { background:transparent; color:var(--blue); border:1px solid var(--blue-dim); padding:5px 10px; font-size:12px; }
+    .btn-demo:hover:not(:disabled) { background:var(--blue-dim); }
+    .btn-approve { background:#1a7f37; color:#fff; padding:8px 16px; }
+    .btn-reject  { background:var(--red-dim); color:var(--red); border:1px solid #6b2020; padding:8px 16px; }
+
+    #health-chip {
+      display:flex; align-items:center; gap:6px; background:var(--surface-2);
+      border:1px solid var(--border); border-radius:20px; padding:5px 12px;
+      font-size:12px; font-weight:500; cursor:pointer; color:var(--text-muted);
+    }
+    #health-chip.online { color:var(--green); border-color:#1a4a2e; }
+    #health-chip.offline{ color:var(--red);   border-color:#4a1a1a; }
+    .dot { width:7px; height:7px; border-radius:50%; background:var(--text-muted); }
+    .online .dot { background:var(--green); box-shadow:0 0 6px #3fb95088; animation:pulse 2s infinite; }
+    .offline .dot { background:var(--red); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+    main { display:grid; grid-template-columns:340px 1fr; flex:1; overflow:hidden; }
+    .left-panel { display:flex; flex-direction:column; border-right:1px solid var(--border); overflow-y:auto; }
+    .panel-section { padding:16px; border-bottom:1px solid var(--border); }
+    label {
+      display:block; font-size:12px; font-weight:600; text-transform:uppercase;
+      letter-spacing:.05em; color:var(--text-muted); margin-bottom:8px;
+    }
+    textarea, input[type="text"], input[type="number"] {
+      width:100%; background:var(--surface-2); border:1px solid var(--border);
+      border-radius:var(--radius); color:var(--text); font-size:13px; font-family:inherit; outline:none;
+    }
+    textarea { resize:none; padding:10px 12px; line-height:1.6; height:96px; }
+    input[type="text"], input[type="number"] { padding:8px 12px; height:36px; }
+    textarea:focus, input:focus { border-color:var(--blue); box-shadow:0 0 0 3px #1a56db22; }
+    .demo-row { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+
+    .right-panel { display:flex; flex-direction:column; overflow:hidden; }
+    .pipeline {
+      display:flex; align-items:center; gap:6px; padding:12px 16px;
+      border-bottom:1px solid var(--border); background:var(--surface); flex-wrap:wrap;
+    }
+    .pnode {
+      border:1px solid var(--border); background:var(--surface-2); border-radius:20px;
+      padding:5px 12px; font-size:12px; color:var(--text-muted); white-space:nowrap;
+    }
+    .pnode.done { border-color:#1a4a2e; color:var(--green); background:var(--green-dim); }
+    .pnode.paused { border-color:#5a3a00; color:var(--orange); background:var(--orange-dim); }
+    .pnode.skipped { opacity:.35; }
+    .parrow { color:var(--text-muted); font-size:12px; }
+
+    .content { flex:1; overflow-y:auto; padding:16px; }
+    .card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:var(--radius); padding:14px 16px; margin-bottom:14px;
+    }
+    .card h3 { font-size:13px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); margin-bottom:10px; }
+    .badge { display:inline-block; font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; }
+    .b-green { background:var(--green-dim); color:var(--green); border:1px solid #1a4a2e; }
+    .b-red   { background:var(--red-dim);   color:var(--red);   border:1px solid #6b2020; }
+    .b-orange{ background:var(--orange-dim);color:var(--orange);border:1px solid #5a3a00; }
+    .b-blue  { background:var(--blue-dim);  color:var(--blue);  border:1px solid #1f4080; }
+    .mono { font-family:var(--mono); font-size:12px; }
+    .muted { color:var(--text-muted); }
+    .answer { line-height:1.65; white-space:pre-wrap; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .kv { display:flex; gap:16px; flex-wrap:wrap; margin:10px 0; }
+    .kv div { background:var(--surface-2); border:1px solid var(--border); border-radius:6px; padding:8px 12px; }
+    .kv b { display:block; font-size:20px; font-family:var(--mono); }
+    .hit { border-left:2px solid var(--blue); padding:6px 10px; margin:6px 0; background:var(--surface-2); }
+    details { border:1px solid var(--border); border-radius:6px; padding:8px 12px; margin:6px 0; background:var(--surface-2); }
+    summary { cursor:pointer; font-size:12px; color:var(--text-muted); }
+    pre { white-space:pre-wrap; word-break:break-word; font-family:var(--mono); font-size:11.5px; margin-top:8px; color:var(--text-muted); }
+    .placeholder { color:var(--text-muted); font-style:italic; padding:20px; text-align:center; }
+    .note { font-size:12px; color:var(--text-muted); line-height:1.6; margin-top:10px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-title">
+      <div class="logo">DO</div>
+      <span>DeskOrchestrator</span>
+      <span class="week-badge">WEEK 10 &middot; PROJECT 20</span>
+    </div>
+    <div id="health-chip" onclick="checkHealth()"><span class="dot"></span><span id="health-text">checking...</span></div>
+  </header>
+
+  <main>
+    <div class="left-panel">
+      <div class="panel-section">
+        <label for="user-id">User ID</label>
+        <input type="text" id="user-id" value="u_1" />
+        <p class="note">u_1 is the seeded demo user: three prior tickets and a procedural rule exist for this id. Any other id gives empty personal memory, which looks like a bug and is not one.</p>
+      </div>
+
+      <div class="panel-section">
+        <label for="req">Request</label>
+        <textarea id="req" placeholder="e.g. I need write access to billing-db"></textarea>
+        <div class="demo-row">
+          <button class="btn-demo" onclick="demo('access')">Access</button>
+          <button class="btn-demo" onclick="demo('software')">Software</button>
+          <button class="btn-demo" onclick="demo('hardware')">Hardware</button>
+          <button class="btn-demo" onclick="demo('escalate')">Escalate</button>
+        </div>
+        <div style="margin-top:12px"><button class="btn-primary" style="width:100%;justify-content:center" id="send" onclick="send()">Send request</button></div>
+      </div>
+
+      <div class="panel-section" id="gate-panel" hidden>
+        <label>Approval gate</label>
+        <div id="gate-body"></div>
+        <div class="row" style="margin-top:10px">
+          <input type="text" id="reviewer" value="ops_lead" style="flex:1" />
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn-approve" onclick="decide(true)">Approve</button>
+          <button class="btn-reject" onclick="decide(false)">Reject</button>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <label>Retrieval inspector</label>
+        <input type="text" id="rq" value="licence seat cost centre" />
+        <div class="row" style="margin-top:8px">
+          <input type="number" id="rk" value="3" min="1" max="20" style="width:80px" />
+          <button class="btn-secondary" style="flex:1;justify-content:center" onclick="inspect_()">Inspect</button>
+        </div>
+        <p class="note">Runs one scoped ticket search and one count, and shows them side by side. On a fresh clone this query returns zero of three.</p>
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="pipeline" id="pipeline">
+        <span class="pnode" id="p-triage">triage</span><span class="parrow">&rarr;</span>
+        <span class="pnode" id="p-spec">specialist</span><span class="parrow">&rarr;</span>
+        <span class="pnode" id="p-gate">gate</span><span class="parrow">&rarr;</span>
+        <span class="pnode" id="p-exec">execute</span><span class="parrow">&rarr;</span>
+        <span class="pnode" id="p-compose">compose</span>
+      </div>
+      <div class="content" id="content">
+        <div class="placeholder">Send a request, or run the retrieval inspector.</div>
+      </div>
+    </div>
+  </main>
+
+<script>
+const API = window.location.origin;
+const DEMOS = {
+  access:   'I need write access to billing-db',
+  software: 'My licence for the design tool expired, can I get a seat',
+  hardware: 'My laptop keyboard has stopped working',
+  escalate: 'I am being asked to hand over a colleague mailbox export for a legal matter'
+};
+let pendingThread = null;
+let lastCalls = [];
+
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const el = id => document.getElementById(id);
+
+function demo(k) { el('req').value = DEMOS[k]; }
+
+function setNodes(state) {
+  ['p-triage','p-spec','p-gate','p-exec','p-compose'].forEach(id => el(id).className = 'pnode');
+  Object.entries(state).forEach(([id, cls]) => { el(id).className = 'pnode ' + cls; });
+}
+
+async function checkHealth() {
+  const chip = el('health-chip');
+  try {
+    const r = await fetch(API + '/health');
+    const d = await r.json();
+    const m = d.models || {};
+    chip.className = 'online';
+    el('health-text').textContent = Object.keys(m).length + ' model pins';
+    chip.title = Object.entries(m).map(([k, v]) => k + ': ' + v).join('\n');
+  } catch (e) {
+    chip.className = 'offline';
+    el('health-text').textContent = 'offline';
+  }
+}
+
+function renderResult(d) {
+  const routeBadge = d.status === 'pending_approval'
+    ? '<span class="badge b-orange">PAUSED AT THE GATE</span>'
+    : '<span class="badge b-green">COMPLETED</span>';
+  let h = '<div class="card"><div class="row">' + routeBadge +
+          '<span class="badge b-blue">' + esc(d.route || 'no route') + '</span>' +
+          '<span class="mono muted">' + esc(d.thread_id) + '</span></div>';
+  if (d.final_answer) h += '<p class="answer" style="margin-top:12px">' + esc(d.final_answer) + '</p>';
+  if (d.status === 'pending_approval') {
+    h += '<p class="note">Nothing has run. The proposal is in the left panel and the thread is holding.</p>';
+  }
+  h += '</div>';
+
+  if ((d.citations || []).length) {
+    h += '<div class="card"><h3>Citations</h3>';
+    d.citations.forEach(c => { h += '<div class="hit mono">' + esc(JSON.stringify(c)) + '</div>'; });
+    h += '</div>';
+  }
+
+  const calls = (d.llm_calls && d.llm_calls.length) ? d.llm_calls : lastCalls;
+  if (calls.length) {
+    h += '<div class="card"><h3>Model calls (' + calls.length + ')</h3>';
+    calls.forEach(c => {
+      h += '<details><summary>' + esc(c.step || c.node || 'call') + ' &middot; ' + esc(c.model || '') + '</summary>' +
+           '<pre>' + esc(JSON.stringify(c, null, 2)) + '</pre></details>';
+    });
+    h += '</div>';
+  }
+  el('content').innerHTML = h;
+}
+
+async function send() {
+  const body = { user_request: el('req').value.trim(), user_id: el('user-id').value.trim() };
+  if (!body.user_request) { return; }
+  el('send').disabled = true;
+  setNodes({ 'p-triage': 'paused' });
+  try {
+    const r = await fetch(API + '/desk', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(JSON.stringify(d.detail || d));
+    lastCalls = d.llm_calls || [];
+    if (d.status === 'pending_approval') {
+      pendingThread = d.thread_id;
+      el('gate-panel').hidden = false;
+      const tool = (d.proposed_action || {}).tool_name;
+      let gateNote = '';
+      if (tool === 'none' || tool == null) {
+        gateNote = '<p class="note"><b>Read this one carefully.</b> The specialist proposed no tool at all, ' +
+                   'and the gate paused anyway. There is nothing here to approve. On a fresh clone ' +
+                   '<span class="mono">risky()</span> returns True for every proposal, which is Task 3 and is ' +
+                   'why two tests in <span class="mono">tests/test_risk.py</span> fail on arrival.</p>';
+      } else {
+        gateNote = '<p class="note">On a fresh clone <span class="mono">risky()</span> returns True for every ' +
+                   'proposal, so every route pauses here. This one probably should pause. The keyboard order ' +
+                   'should not, and telling them apart is Task 3.</p>';
+      }
+      el('gate-body').innerHTML = '<div class="mono">' + esc(JSON.stringify(d.proposed_action, null, 2)) + '</div>' + gateNote;
+      setNodes({ 'p-triage': 'done', 'p-spec': 'done', 'p-gate': 'paused', 'p-exec': 'skipped', 'p-compose': 'skipped' });
+    } else {
+      pendingThread = null;
+      el('gate-panel').hidden = true;
+      const escalated = d.route === 'escalate_human';
+      setNodes(escalated
+        ? { 'p-triage': 'done', 'p-spec': 'skipped', 'p-gate': 'skipped', 'p-exec': 'skipped', 'p-compose': 'done' }
+        : { 'p-triage': 'done', 'p-spec': 'done', 'p-gate': 'done', 'p-exec': 'done', 'p-compose': 'done' });
+    }
+    renderResult(d);
+  } catch (e) {
+    el('content').innerHTML = '<div class="card"><span class="badge b-red">ERROR</span><pre>' + esc(e.message) + '</pre></div>';
+  } finally {
+    el('send').disabled = false;
+  }
+}
+
+async function decide(approved) {
+  if (!pendingThread) return;
+  try {
+    const r = await fetch(API + '/approve', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ thread_id: pendingThread, approved, reviewer_id: el('reviewer').value.trim() })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(JSON.stringify(d.detail || d));
+    pendingThread = null;
+    el('gate-panel').hidden = true;
+    setNodes({ 'p-triage': 'done', 'p-spec': 'done', 'p-gate': 'done',
+               'p-exec': approved ? 'done' : 'skipped', 'p-compose': 'done' });
+    renderResult(d);
+  } catch (e) {
+    el('content').innerHTML = '<div class="card"><span class="badge b-red">ERROR</span><pre>' + esc(e.message) + '</pre></div>';
+  }
+}
+
+async function inspect_() {
+  const q = el('rq').value.trim(), uid = el('user-id').value.trim(), k = el('rk').value;
+  try {
+    const r = await fetch(API + '/debug/retrieval?q=' + encodeURIComponent(q) +
+                          '&user_id=' + encodeURIComponent(uid) + '&k=' + encodeURIComponent(k));
+    const d = await r.json();
+    const ok = d.recall_ok;
+    let h = '<div class="card"><div class="row">' +
+      (ok ? '<span class="badge b-green">RECALL OK</span>'
+          : '<span class="badge b-red">RECALL FAILURE</span>') +
+      '<span class="mono muted">' + esc(d.query) + '</span></div>' +
+      '<div class="kv">' +
+        '<div><span class="muted">owned by ' + esc(d.user_id) + '</span><b>' + d.owned_by_this_user + '</b></div>' +
+        '<div><span class="muted">returned</span><b>' + d.returned_count + '</b></div>' +
+        '<div><span class="muted">k</span><b>' + d.k + '</b></div>' +
+      '</div>';
+    h += ok
+      ? '<p class="note">The search returned rows this user owns. Note that this does not prove the filter runs in the right order, only that it returned something: try a query whose words do not appear in any ticket.</p>'
+      : '<p class="note"><b>This is not a leak.</b> No other user\'s rows reached you, and none can: filtering after ranking still filters. What broke is which rows got CONSIDERED. The index ranked across every row in the store, took the top k, and the scope filter then discarded almost all of them. Nothing errored and nothing logged.</p>';
+    if (d.returned.length) {
+      h += '<h3 style="margin-top:12px">Returned</h3>';
+      d.returned.forEach(x => {
+        h += '<div class="hit"><span class="mono">' + esc(x.chunk_id) + '</span> ' +
+             '<span class="muted mono">score ' + esc(x.score) + '</span><br>' +
+             '<span class="muted">' + esc((x.text || '').slice(0, 160)) + '</span></div>';
+      });
+    }
+    h += '</div>';
+    el('content').innerHTML = h;
+  } catch (e) {
+    el('content').innerHTML = '<div class="card"><span class="badge b-red">ERROR</span><pre>' + esc(e.message) + '</pre></div>';
+  }
+}
+
+checkHealth();
+</script>
+</body>
+</html>
